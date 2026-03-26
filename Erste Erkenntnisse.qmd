@@ -1,0 +1,648 @@
+---
+title: "Verkehrspolitik im Deutschen Bundestag - Erste explorative Erkenntnisse"
+format:
+  html:
+    embed-resources: true
+    self-contained-math: true
+editor: visual
+---
+
+```{r, echo = FALSE, message=FALSE}
+library(tidyverse)
+library(zoo)
+library(kableExtra)
+library(plotly)
+library(rlang)
+library(DT)
+library(stopwords)
+library(tidytext)
+```
+
+```{r, echo = FALSE}
+bt_corp <- read_rds(
+  "/home/jan/Dokumente/Datensätze/Projekt IHK/coded_df_full.rds"
+)
+
+bt_corp_filtered <- bt_corp %>%
+  filter(chair == FALSE) %>%
+  mutate(
+    date = as.Date(date),
+    year = year(date),
+    month = month(date),
+    year_month = floor_date(date, "month"), # für zoo/ggplot
+    lp = as.integer(lp)
+  )
+```
+
+## Methodik zur Identifikation verkehrspolitischer Reden
+
+Um verkehrspolitische Reden im **GermaParl-Korpus** zu identifizieren, wurde das Klassifikationsmodell [`parlbert-topic-german`](https://huggingface.co/chkla/parlbert-topic-german) eingesetzt. Dieses Modell basiert auf Sätzen, die nach dem Codebuch des **Comparative Agendas Project** kodiert und zum Training des Modells genutzt wurden.
+
+Die folgende Übersicht der Codes illustriert die erfassten Themenbereiche; die Untercodes vermitteln dabei ein basales Verständnis der thematischen Zuschnitte. Detaillierte Informationen sind im Codebuch (deutsche Version: [PDF](https://www.gpa.uni-konstanz.de/securedl/sdl-eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NzQyNTkwMjYsImV4cCI6MTc3NDk1MDIyNiwidXNlciI6MCwiZ3JvdXBzIjpbMCwtMV0sImZpbGUiOiJmaWxlYWRtaW4vcG9sdmVyL2FnLWJyZXVuaWcvY2FwL0NBUGNvZGVib29rX3YzLnBkZiIsInBhZ2UiOjE2MDA4Nn0.gDOzExTYTv9Rg8eIeF8UH6vHsq2ZwqeVQqGU1PwoUFA/CAPcodebook_v3.pdf)) hinterlegt.
+
+```{r, echo = FALSE}
+cap <- readxl::read_xlsx(
+  "/home/jan/Dokumente/Datensätze/Projekt IHK/CAP_Codebuch.xlsx"
+) %>%
+  rename(Originalname = 1) %>%
+  mutate(Kategorie = gsub("(\\w+)\\s+(.*)", "\\1", Originalname)) %>%
+  mutate(
+    Kategorie = if_else(
+      grepl("Macroeconomy", Kategorie),
+      paste("Macroeconomics"),
+      paste(Kategorie)
+    )
+  )
+
+cap |>
+  select(-Kategorie) |>
+  arrange(Originalname != "Transportation") |>
+  kbl(
+    format    = "html",
+    col.names = c("Originalname", "Übersetzung", "Unterkategorien"),
+    caption   = "Übersicht der CAP-Kategorien und ihrer Unterkategorien",
+    align     = c("l", "l", "l")
+  ) |>
+  kable_styling(
+    bootstrap_options = c("striped", "hover", "condensed"),
+    full_width        = TRUE,
+    font_size         = 13
+  ) |>
+  column_spec(1, bold = TRUE, width = "10em") |>
+  column_spec(2, width = "14em") |>
+  column_spec(3, width = "40em", color = "grey40") |>
+  scroll_box(height = "400px")
+
+```
+
+Dabei zeigt sich:
+
+-   Der Code **"Transportation"** deckt alle wesentlichen Aspekte der Verkehrspolitik vollumfänglich ab.
+
+- Die [Modellevaluation](https://huggingface.co/chkla/parlbert-topic-german) bescheinigt dieser Kategorie einen **[F1-Score]{.abbr title="Der F1-Score kombiniert Präzision (wie viele der als 'Transportation' klassifizierten Texte sind es wirklich?) und Vollständigkeit (wie viele der echten Transportation-Texte wurden gefunden?) zu einer einzigen Kennzahl. Ein Wert von 1 wäre perfekt, 0 völlig unbrauchbar."}  von 0,86**, was eine sehr zuverlässige Identifikation ermöglicht.
+
+-   Das Modell ist somit hervorragend geeignet, um verkehrspolitische Reden **robust zu erfassen**.
+
+### Anwendung und Aggregation
+
+Das Modell wurde um eine zuverlässige Erkennung im Rahmen seiner Restriktionen zu ermöglichen jeweils auf ein Kontextfenster von **drei aufeinanderfolgenden Sätzen** angewendet. Die Ergebnisse wurden anschließend auf die Redenebene aggregiert:
+
+1.  **Zuweisung:** Eine Rede wurde einem oder mehreren Themen zugeordnet, wenn diese entweder am häufigsten kodiert wurden oder mindestens **40 %** der Dreisatz-Einheiten eines der Themen aufwiesen.
+
+2.  **Gewichtung:** Um der stark divergierenden Länge der Reden Rechnung zu tragen, dient nicht die reine Anzahl der Reden als Maßzahl. Stattdessen wurde der **Anteil der Wörter** dieser Reden an der Gesamtwortzahl des (Sub-)Korpus berechnet.
+
+3.  **Hinweis:** Da Reden keinem oder mehreren Themen gleichzeitig zugeordnet werden können, kann der kumulierte Gesamtanteil die **100 %-Marke** über- oder unterschreiten.
+
+## Themenverteilung der Reden im Bundestag
+
+Ein Blick auf die Rangliste der am häufigsten adressierten Politikfelder im Bundestag verdeutlicht, dass die Verkehrspolitik in keiner der untersuchten Legislaturperioden in den Top 10 vertreten ist. Tatsächlich schwankt der Anteil der verkehrspolitischen Reden zwischen 2 und 3 Prozent des Gesamtkorpus. Mit Rang 11 und einem Anteil von 3,2 bzw. 3,1 Prozent wurde das Thema in der 14. und 15. Legislaturperiode (der rot-grünen Regierungszeit zwischen 1998 und 2005) am intensivsten diskutiert. Besonders häufig findet indes der Code „Öffentliche Verwaltung“ Erwähnung, der vor allem die prozeduralen Elemente der parlamentarischen Arbeit erfasst. Die insgesamt am häufigsten besprochenen Politikfelder sind die Außen-, Wirtschafts- und Sozialpolitik.
+
+```{r, echo = FALSE}
+# Kategorien automatisch aus share_* Spalten extrahieren
+categories <- names(bt_corp_filtered) |>
+  str_subset("^share_") |>
+  str_remove("^share_")
+
+# Ausdrucks-Generator pro Kategorie
+make_cat_exprs <- function(cat) {
+  share_var <- sym(paste0("share_", cat))
+  cond <- expr(str_detect(dominant_cat, fixed(!!cat)) | !!share_var >= 0.4)
+
+  list2(
+    !!paste0("words_", cat) := expr(sum(words_speech[!!cond], na.rm = TRUE)),
+    !!paste0("word_share_", cat) := expr(
+      sum(words_speech[!!cond], na.rm = TRUE) /
+        sum(words_speech, na.rm = TRUE) *
+        100
+    )
+  )
+}
+
+
+# Alle Ausdrücke zusammenführen
+cat_exprs <- categories |>
+  map(make_cat_exprs) |>
+  list_flatten()
+
+lp_topicrank <- bt_corp_filtered |>
+  group_by(lp) |>
+  summarise(
+    words_total = sum(words_speech, na.rm = TRUE),
+    !!!cat_exprs,
+    .groups = "drop"
+  ) |>
+  select(lp, starts_with("word_share_")) |>
+  pivot_longer(
+    cols = starts_with("word_share_"),
+    names_to = "Kategorie",
+    names_prefix = "word_share_",
+    values_to = "word_share"
+  ) |>
+  group_by(lp) |>
+  mutate(rank = rank(-word_share, ties.method = "min")) |>
+  ungroup() |>
+  arrange(lp, rank)
+
+cap <- readxl::read_xlsx(
+  "/home/jan/Dokumente/Datensätze/Projekt IHK/CAP_Codebuch.xlsx"
+) %>%
+  rename(Originalname = 1) %>%
+  mutate(Kategorie = gsub("(\\w+)\\s+(.*)", "\\1", Originalname)) %>%
+  mutate(
+    Kategorie = if_else(
+      grepl("Macroeconomy", Kategorie),
+      paste("Macroeconomics"),
+      paste(Kategorie)
+    )
+  )
+
+lp_years <- c(
+  "12" = "1990–1994",
+  "13" = "1994–1998",
+  "14" = "1998–2002",
+  "15" = "2002–2005",
+  "16" = "2005–2009",
+  "17" = "2009–2013",
+  "18" = "2013–2017",
+  "19" = "2017–2021",
+  "20" = "2021–2025"
+)
+
+lp_ids <- sort(unique(lp_topicrank$lp))
+lp_col_names <- paste0("LP ", lp_ids, "\n", "(", lp_years[as.character(lp_ids)], ")")
+
+lp_topicrank |>
+  left_join(cap, by = "Kategorie") |>
+  mutate(label = paste0(Übersetzung, " (", round(word_share, 1), "%)")) |>
+  select(lp, rank, label) |>
+  pivot_wider(names_from = lp, values_from = label) |>
+  arrange(rank) |>
+  kbl(
+    col.names = c("Rank", lp_col_names),
+    caption   = "Themen nach Wortanteil pro Legislaturperiode"
+  ) |>
+  kable_styling(
+    bootstrap_options = c("striped", "hover", "condensed"),
+    full_width        = TRUE,
+    font_size         = 12
+  ) |>
+  column_spec(1, bold = TRUE, width = "3em") |>
+  scroll_box(height = "600px")
+```
+
+### Themenkonjunktur der Verkehrspolitik
+
+Inwiefern sich der Anteil verkehrspolitischer Reden im Bundestag im Zeitverlauf verändert hat und welche Debatten dazu beitragen, lässt sich präzise im Monatsverlauf ablesen. In der oberen Grafik ist der Anteil für jeden Monat sowie der allgemeine Trend dargestellt. Dabei zeigt sich, dass Verkehrspolitik insbesondere in der Mitte der Legislaturperioden überdurchschnittlich häufig thematisiert wird. Die Monate mit den höchsten Anteilen sind der März 1992 (15,1 %), der Dezember 1997 (11,3 %) und der Januar 2001 (11 %). Aus den letzten zehn Jahren sticht der Februar 2023 mit 10,3 % hervor.
+
+```{r, echo = FALSE}
+lp_starts <- bt_corp %>%
+  group_by(lp) %>%
+  summarise(start = min(date), .groups = "drop")
+
+transport_monthly <- bt_corp_filtered %>%
+  group_by(year_month, lp) %>%
+  summarise(
+    mean_share = mean(share_Transportation, na.rm = TRUE),
+    agg_share = sum(n_Transportation, na.rm = TRUE) /
+      sum(n_sentences, na.rm = TRUE) *
+      100,
+    n_speeches = n(),
+    n_transport = sum(
+      Transportation_dominant == TRUE |
+        share_Transportation >= 0.4,
+      na.rm = TRUE
+    ),
+    pct_transport = mean(
+      Transportation_dominant == TRUE |
+        share_Transportation >= 0.4,
+      na.rm = TRUE
+    ) *
+      100,
+    n_transport_sentences = sum(n_Transportation, na.rm = TRUE),
+    n_total_sentences = sum(n_sentences, na.rm = TRUE),
+    words_transport = sum(
+      words_speech[
+        Transportation_dominant == TRUE |
+          share_Transportation >= 0.4
+      ],
+      na.rm = TRUE
+    ),
+    words_total = sum(words_speech, na.rm = TRUE),
+    word_share_transport = words_transport / words_total * 100,
+    .groups = "drop"
+  )
+
+german_months <- c("Januar", "Februar", "März", "April", "Mai", "Juni",
+                   "Juli", "August", "September", "Oktober", "November", "Dezember")
+
+transport_monthly_plot <- transport_monthly %>%
+  mutate(
+    tooltip_text = paste0(
+      german_months[month(year_month)], " ", year(year_month), "\n",
+      gsub("\\.", ",", format(round(word_share_transport, 1), nsmall = 1)), "%"
+    )
+  )
+
+# LOESS manuell berechnen
+loess_fit <- loess(word_share_transport ~ as.numeric(year_month),
+                   data = transport_monthly_plot, span = 0.15)
+transport_monthly_plot <- transport_monthly_plot %>%
+  mutate(loess_y = predict(loess_fit))
+
+# LP-Grenzen als shapes
+lp_shapes <- map(seq_len(nrow(lp_starts)), \(i) {
+  list(
+    type = "line",
+    x0 = lp_starts$start[i], x1 = lp_starts$start[i],
+    y0 = 0, y1 = 1, yref = "paper",
+    line = list(color = "gray50", dash = "dash", width = 1)
+  )
+})
+
+# LP-Labels als annotations
+lp_annotations <- map(seq_len(nrow(lp_starts)), \(i) {
+  list(
+    x = lp_starts$start[i], y = 1, yref = "paper",
+    text = paste0("LP ", lp_starts$lp[i]),
+    showarrow = FALSE,
+    xanchor = "left", yanchor = "top",
+    font = list(color = "gray40", size = 11)
+  )
+})
+
+plot_ly(transport_monthly_plot, x = ~year_month) |>
+  add_trace(
+    y         = ~word_share_transport,
+    type      = "scatter",
+    mode      = "lines",
+    line      = list(color = "steelblue", width = 1),
+    name      = "Monatswert",
+    hovertemplate = ~paste0(tooltip_text, "<extra></extra>")
+  ) |>
+  add_trace(
+    y         = ~loess_y,
+    type      = "scatter",
+    mode      = "lines",
+    line      = list(color = "darkblue", width = 2),
+    name      = "Trend",
+    hoverinfo = "none"
+  ) |>
+  layout(
+    title      = list(text = "Verkehrspolitik im Bundestag: Themenkonjunkturen"),
+    xaxis      = list(title = ""),
+    yaxis      = list(title = "Anteil Verkehr (%)", ticksuffix = "%"),
+    hovermode  = "x unified",
+    shapes     = lp_shapes,
+    annotations = lp_annotations,
+    legend     = list(orientation = "h", y = -0.1)
+  )
+
+```
+
+Um einen ersten explorativen Einblick in die verkehrspolistischen Debatten und Reden zu erhalten, die diese Entwicklungen auslösen, stellt die untere Tabelle die am häufigsten verwendeten Begriffe den besonders charakteristischen Wörtern des jeweiligen Monats gegenüber.
+
+Zur Bestimmung dieser besonders charakteristischen Wörter wurde für jedes Wort der **TF-IDF-Wert** (Term Frequency-Inverse Document Frequency) berechnet. Während die reine Häufigkeit oft unspezifische Begriffe (wie „Bahn“ oder „Verkehr“) nach oben spült, filtert das **TF-IDF-Maß** die inhaltlichen Besonderheiten heraus:
+
+**TF (Häufigkeit)**: Misst, wie oft ein Wort im aktuellen Monat vorkommt.
+
+**IDF (Relevanz-Filter)**: Bewertet, wie einzigartig ein Wort im Vergleich zum gesamten Zeitraum ist. Begriffe, die in fast jedem Monat fallen, werden abgewertet; Begriffe, die spezifisch für den gewählten Monat sind, werden aufgewertet.
+
+Die dargestellten Top 5 nach TF-IDF zeigen somit die prägenden Schlagwörter und Ereignisse auf, die die verkehrspolitische Debatte eines Monats gegenüber anderen Zeiträumen besonders auszeichnen. Da die Tabelle durchsuchbar ist, lassen sich beispielsweise gezielt jene Monate identifizieren, in denen Themen wie Brücken oder das Deutschlandticket besondere Aufmerksamkeit erfuhren.
+
+```{r, echo = FALSE}
+transport_yearly <- bt_corp_filtered %>%
+  group_by(year) %>%
+  summarise(
+    mean_share = mean(share_Transportation, na.rm = TRUE),
+    agg_share = sum(n_Transportation, na.rm = TRUE) /
+      sum(n_sentences, na.rm = TRUE) *
+      100,
+    n_speeches = n(),
+    n_transport = sum(
+      Transportation_dominant == TRUE |
+        share_Transportation >= 0.4,
+      na.rm = TRUE
+    ),
+    pct_transport = mean(
+      Transportation_dominant == TRUE |
+        share_Transportation >= 0.4,
+      na.rm = TRUE
+    ) *
+      100,
+    n_transport_sentences = sum(n_Transportation, na.rm = TRUE),
+    n_total_sentences = sum(n_sentences, na.rm = TRUE),
+    words_transport = sum(
+      words_speech[
+        Transportation_dominant == TRUE |
+          share_Transportation >= 0.4
+      ],
+      na.rm = TRUE
+    ),
+    words_total = sum(words_speech, na.rm = TRUE),
+    word_share_transport = words_transport / words_total * 100,
+    .groups = "drop"
+  )
+```
+
+
+```{r, echo = FALSE}
+transportation_filtered <- bt_corp_filtered %>%
+  filter(
+    (Transportation_dominant == TRUE |
+      share_Transportation > 0.3999) &
+      (anteil_ampel < 0.035)
+  )
+
+# Presidency herausfiltern
+transport_mp <- transportation_filtered |>
+  filter(role != "presidency") |>
+  mutate(
+    date = as.Date(date),
+    year = year(date)
+  )
+
+# Deutsche Stoppwörter
+stop_de <- tibble(
+  word = c(
+    stopwords("de", source = "stopwords-iso"),
+    # Parlamentarische Floskeln
+    c(
+      "herr",
+      "frau",
+      "damen",
+      "herren",
+      "kolleginnen",
+      "kollegen",
+      "abgeordneter",
+      "abgeordnete",
+      "liebe",
+      "lieber",
+      "präsident",
+      "präsidentin",
+      "bundesminister",
+      "bundesministerin",
+      "antrag",
+      "bundesregierung",
+      "ja",
+      "wir",
+      "sie",
+      "das",
+      "ist",
+      "ich",
+      "die",
+      "der",
+      "und",
+      "daß",
+      "dass",
+      "auch",
+      "sehr",
+      "wird",
+      "es",
+      "haben",
+      "sind",
+      "einem",
+      "einer",
+      "wurde",
+      "werden",
+      "aber",
+      "gibt",
+      "dass",
+      "beim",
+      "beim",
+      "mehr",
+      "hier",
+      "schon",
+      "noch",
+      "bitte"
+    )
+  )
+)
+
+# Tokenisieren
+tokens <- transport_mp |>
+  select(
+    speech_code,
+    year_month,
+    lp,
+    parliamentary_group,
+    party,
+    speech_text
+  ) |>
+  unnest_tokens(word, speech_text) |>
+  anti_join(stop_de, by = "word") |>
+  filter(
+    str_length(word) > 2,
+    !str_detect(word, "^\\d+$") # Zahlen raus
+  )
+
+tfidf_month <- tokens |>
+  count(year_month, word) |>
+  bind_tf_idf(word, year_month, n) |>
+  arrange(year_month, desc(tf_idf))
+
+# Top-10 häufigste Wörter pro Monat (nach Rohfrequenz)
+top_freq_month <- tokens |>
+  count(year_month, word) |>
+  filter(n > 5) |>
+  group_by(year_month) |>
+  slice_max(n, n = 10, with_ties = FALSE) |>
+  summarise(top_freq_words = paste(word, collapse = ", "))
+
+# Top-10 charakteristische Wörter (TF-IDF)
+tfidf_month |>
+  filter(n > 5) |>
+  group_by(year_month) |>
+  slice_max(tf_idf, n = 10, with_ties = FALSE) |>
+  summarise(top_words = paste(word, collapse = ", ")) |>
+  left_join(top_freq_month, by = "year_month") |>
+  relocate(top_freq_words, .before = "top_words") |>
+  left_join(transport_monthly %>% 
+    select(year_month, word_share_transport), by = "year_month") |>
+  select(year_month, top_freq_words, top_words, word_share_transport) |>
+  mutate(
+    year_month_sort      = as.numeric(year_month),
+    year_month           = format(year_month, "%B %Y"),
+    word_share_transport = round(word_share_transport, 1)
+  ) |>
+  select(year_month, year_month_sort, top_freq_words, top_words, word_share_transport) |>
+  datatable(
+    colnames  = c("Monat", "_sort", "Häufigste Wörter", "Charakteristische Wörter (TF-IDF)", "Anteil Verkehr (%)"),
+    caption   = "Verkehrspolitische Reden im Bundestag nach Monat",
+    filter    = "top",
+    rownames  = FALSE,
+    options   = list(
+      pageLength  = 5,
+      order       = list(list(0, "asc")),
+      columnDefs  = list(
+        list(visible = FALSE, targets = 1),          # Sortierspalte verstecken
+        list(orderData = 1, targets = 0)             # Spalte 0 nach Spalte 1 sortieren
+      ),
+      language = list(
+        url = "//cdn.datatables.net/plug-ins/1.13.6/i18n/de-DE.json"
+      )
+    )
+  ) |>
+  formatString(columns = "word_share_transport", suffix = "%")
+```
+
+### Vergleich Thematisierung im Bundestag und Drittvariablen
+
+Inwiefern externe Faktoren einen Einfluss auf die Thematisierung im Bundestag haben und inwiefern das Thematisierungsvolumen im Bundeshaushalt niederschlägt soll im Folgenden explorativ anhand der zur Verfügung gestellten Drittvariablen erörtert werden.
+
+#### Einfluss des Stauvolumens auf das Debattenvolumen
+
+Die Grafik untersucht explorativ den Zusammenhang zwischen der ADAC-Staustatistik als externem Belastungsfaktor und dem Anteil verkehrspolitischer Reden im Bundestag. Während das Thematisierungsvolumen im Zeitverlauf deutliche Spitzen von über 3 % erreichte, zeigen die Staudaten ab 2015 eine differenzierte Entwicklung mit einem Höchststand der Meldungen im Jahr 2018. Besonders auffällig ist das Jahr 2020, in dem trotz pandemiebedingt massiv sinkender Stauzahlen die parlamentarische Aufmerksamkeit mit 3,27 % hoch blieb. Methodische Umstellungen beim ADAC ab Juni 2022 erschweren zwar den direkten Vergleich der Folgejahre, doch korreliert das hohe Diskussionsniveau von 2023 (3,26 %) mit der wieder gestiegenen Staudauer von über 427.000 Stunden.
+
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
+stau <- read_csv(
+  "/home/jan/Dokumente/Datensätze/Projekt IHK/Drittvariablen/staustatistik.csv"
+)
+
+transport_yearly4 <- left_join(
+  transport_yearly %>% filter(year > 2009),
+  stau,
+  by = c("year" = "jahr")
+) %>%
+    select(
+    year,
+    word_share_transport,
+    anzahl_staumeldungen,
+    staudauer,
+    staulänge
+  )
+
+plot_ly(transport_yearly4 %>% filter(year < 2025), x = ~year) |>
+  add_trace(
+    y             = ~word_share_transport,
+    type          = "scatter",
+    mode          = "lines+markers",
+    name          = "Redeanteil",
+    line          = list(color = "steelblue", width = 2),
+    marker        = list(color = "steelblue", size = 5),
+    hovertemplate = ~paste0(year, "<br>Redeanteil: ",
+                            gsub("\\.", ",", format(round(word_share_transport, 1), nsmall = 1)),
+                            "%<extra></extra>")
+  ) |>
+  add_trace(
+    y             = ~anzahl_staumeldungen / 1000,
+    type          = "scatter",
+    mode          = "lines+markers",
+    name          = "Anzahl Staumeldungen",
+    yaxis         = "y2",
+    line          = list(color = "darkorange", width = 2, dash = "dash"),
+    marker        = list(color = "darkorange", size = 5),
+    hovertemplate = ~paste0(year, "<br>Staumeldungen: ",
+                            formatC(anzahl_staumeldungen, format = "d", big.mark = "."),
+                            "<extra></extra>")
+  ) |>
+  add_trace(
+    y             = ~staudauer / 1000,
+    type          = "scatter",
+    mode          = "lines+markers",
+    name          = "Staudauer (min)",
+    yaxis         = "y2",
+    line          = list(color = "darkred", width = 2, dash = "dot"),
+    marker        = list(color = "darkred", size = 5),
+    hovertemplate = ~paste0(year, "<br>Staudauer: ",
+                            formatC(staudauer, format = "d", big.mark = "."),
+                            "<extra></extra>")
+  ) |>
+  add_trace(
+    y             = ~staulänge / 1000,
+    type          = "scatter",
+    mode          = "lines+markers",
+    name          = "Staulänge (km)",
+    yaxis         = "y2",
+    line          = list(color = "darkgreen", width = 2, dash = "dashdot"),
+    marker        = list(color = "darkgreen", size = 5),
+    hovertemplate = ~paste0(year, "<br>Staulänge: ",
+                            formatC(staulänge, format = "d", big.mark = "."),
+                            "<extra></extra>")
+  ) |>
+  layout(
+    title     = "Redeanteil Verkehrspolitik vs. Staustatistik",
+    xaxis     = list(title = "", dtick = 1, tickangle = -45),
+    yaxis     = list(title = "Redeanteil (%)", ticksuffix = "%", color = "steelblue"),
+    yaxis2    = list(
+      title      = "Staustatistik (in Tsd.)",
+      overlaying = "y",
+      side       = "right",
+      color      = "gray30",
+      ticksuffix = "k"
+    ),
+    hovermode = "x unified",
+    legend    = list(orientation = "h", y = -0.25),
+    margin    = list(r = 80)
+  )
+
+```
+
+#### Zusammenhang zwischen Debattenvolumen und Prioritäten im Bundeshaushalt (Einzelplan 12)
+
+Die Analyse der Haushaltsdaten verdeutlicht, dass der Anteil des Einzelplans 12 am Gesamthaushalt über Jahrzehnte hinweg eine bemerkenswerte Stabilität aufweist, wobei der Soll-Anteil zumeist zwischen 7 % und 11 % fluktuiert. Ein direkter Gleichlauf zwischen dem parlamentarischen Diskussionsvolumen und den Haushaltsanteilen lässt sich nur punktuell feststellen, wie etwa beim Anstieg der Debattenintensität um das Jahr 2001 (4,46 %), der mit stabil hohen Ausgabenanteilen von über 10 % korrespondierte. In der jüngeren Betrachtung ab 2012, für die eine präzise Abgrenzung rein verkehrsrelevanter Titel vorliegt, zeigt sich eine hohe Resilienz des Budgets gegenüber kurzfristigen Debattenschwankungen. Selbst im Pandemiejahr 2020 sank der Ist-Anteil am Haushalt auf 6,66 %, während die parlamentarische Aufmerksamkeit für Verkehrsthemen untypisch hoch blieb. Auffällig ist die Entwicklung im Jahr 2024, in dem der Ist-Anteil auf 9,22 % anstieg, obwohl das Thematisierungsvolumen im Bundestag mit 2,08 % eher unterdurchschnittlich ausfiel. Dies deutet darauf hin, dass die Budgetallokation im Verkehrsbereich primär durch langfristige Investitionszyklen und infrastrukturelle Verpflichtungen bestimmt wird und weniger auf tagesaktuelle parlamentarische Konjunkturen reagiert. Die methodischen Brüche in der Ressortzuständigkeit zwischen 1999 und 2011 erschweren zwar die Detailanalyse, ändern jedoch nichts an der Erkenntnis, dass der Verkehrsbereich eine fiskalische Konstante darstellt, die weitgehend entkoppelt von der variablen Intensität öffentlicher Debatten agiert.
+
+```{r, echo = FALSE, warning = FALSE, message = FALSE}
+anteil_epl12 <- read_csv2(
+  "/home/jan/Dokumente/Datensätze/Projekt IHK/Drittvariablen/anteil_ep12.csv"
+)
+
+transport_yearly3 <- left_join(
+  transport_yearly,
+  anteil_epl12,
+  by = c("year" = "jahr")
+) %>%
+  select(
+    year,
+    word_share_transport,
+    soll_anteil_gesamthaushalt,
+    ist_anteil_gesamthaushalt
+  )
+
+p_alle <- plot_ly(transport_yearly3 %>% filter(year < 2025), x = ~year) |>
+  add_trace(
+    y             = ~word_share_transport,
+    type          = "scatter",
+    mode          = "lines+markers",
+    name          = "Redeanteil",
+    line          = list(color = "steelblue", width = 2),
+    marker        = list(color = "steelblue", size = 5),
+    hovertemplate = ~paste0(year, "<br>Redeanteil: ",
+                            gsub("\\.", ",", format(round(word_share_transport, 1), nsmall = 1)),
+                            "%<extra></extra>")
+  ) |>
+  add_trace(
+    y             = ~soll_anteil_gesamthaushalt,
+    type          = "scatter",
+    mode          = "lines+markers",
+    name          = "Soll-Anteil Gesamthaushalt",
+    line          = list(color = "darkorange", width = 2, dash = "dash"),
+    marker        = list(color = "darkorange", size = 5),
+    hovertemplate = ~paste0(year, "<br>Soll-Anteil: ",
+                            gsub("\\.", ",", format(round(soll_anteil_gesamthaushalt, 1), nsmall = 1)),
+                            "%<extra></extra>")
+  ) |>
+  add_trace(
+    y             = ~ist_anteil_gesamthaushalt,
+    type          = "scatter",
+    mode          = "lines+markers",
+    name          = "Ist-Anteil Gesamthaushalt",
+    line          = list(color = "darkgreen", width = 2, dash = "dot"),
+    marker        = list(color = "darkgreen", size = 5),
+    hovertemplate = ~paste0(year, "<br>Ist-Anteil: ",
+                            gsub("\\.", ",", format(round(ist_anteil_gesamthaushalt, 1), nsmall = 1)),
+                            "%<extra></extra>")
+  ) |>
+  layout(
+    title     = "Redeanteil Verkehrspolitik vs. Soll- und Ist-Anteil am Gesamthaushalt",
+    xaxis     = list(title = "", dtick = 2, tickangle = -45),
+    yaxis     = list(title = "Anteil (%)", ticksuffix = "%"),
+    hovermode = "x unified",
+    legend    = list(orientation = "h", y = -0.2)
+  )
+```
+
+
+```{r, echo = FALSE}
+p_alle
+```
+
