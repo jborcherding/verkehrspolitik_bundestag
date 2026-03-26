@@ -79,7 +79,7 @@ Dabei zeigt sich:
 
 -   Der Code **"Transportation"** deckt alle wesentlichen Aspekte der Verkehrspolitik vollumfänglich ab.
 
-- Die [Modellevaluation](https://huggingface.co/chkla/parlbert-topic-german) bescheinigt dieser Kategorie einen **[F1-Score]{.abbr title="Der F1-Score kombiniert Präzision (wie viele der als 'Transportation' klassifizierten Texte sind es wirklich?) und Vollständigkeit (wie viele der echten Transportation-Texte wurden gefunden?) zu einer einzigen Kennzahl. Ein Wert von 1 wäre perfekt, 0 völlig unbrauchbar."}  von 0,86**, was eine sehr zuverlässige Identifikation ermöglicht.
+-   Die [Modellevaluation](https://huggingface.co/chkla/parlbert-topic-german) bescheinigt dieser Kategorie einen [**F1-Score**]{.abbr title="Der F1-Score kombiniert Präzision (wie viele der als 'Transportation' klassifizierten Texte sind es wirklich?) und Vollständigkeit (wie viele der echten Transportation-Texte wurden gefunden?) zu einer einzigen Kennzahl. Ein Wert von 1 wäre perfekt, 0 völlig unbrauchbar."} **von 0,86**, was eine sehr zuverlässige Identifikation ermöglicht.
 
 -   Das Modell ist somit hervorragend geeignet, um verkehrspolitische Reden **robust zu erfassen**.
 
@@ -307,7 +307,7 @@ Zur Bestimmung dieser besonders charakteristischen Wörter wurde für jedes Wort
 
 **IDF (Relevanz-Filter)**: Bewertet, wie einzigartig ein Wort im Vergleich zum gesamten Zeitraum ist. Begriffe, die in fast jedem Monat fallen, werden abgewertet; Begriffe, die spezifisch für den gewählten Monat sind, werden aufgewertet.
 
-Die dargestellten Top 5 nach TF-IDF zeigen somit die prägenden Schlagwörter und Ereignisse auf, die die verkehrspolitische Debatte eines Monats gegenüber anderen Zeiträumen besonders auszeichnen. Da die Tabelle durchsuchbar ist, lassen sich beispielsweise gezielt jene Monate identifizieren, in denen Themen wie Brücken oder das Deutschlandticket besondere Aufmerksamkeit erfuhren.
+Die dargestellten Top 10 nach TF-IDF zeigen somit die prägenden Schlagwörter und Ereignisse auf, die die verkehrspolitische Debatte eines Monats gegenüber anderen Zeiträumen besonders auszeichnen. Da die Tabelle durchsuchbar ist, lassen sich beispielsweise gezielt jene Monate identifizieren, in denen Themen wie Brücken oder das Deutschlandticket besondere Aufmerksamkeit erfuhren.
 
 ```{r, echo = FALSE}
 transport_yearly <- bt_corp_filtered %>%
@@ -343,7 +343,6 @@ transport_yearly <- bt_corp_filtered %>%
     .groups = "drop"
   )
 ```
-
 
 ```{r, echo = FALSE}
 transportation_filtered <- bt_corp_filtered %>%
@@ -641,8 +640,6 @@ p_alle <- plot_ly(transport_yearly3 %>% filter(year < 2025), x = ~year) |>
   )
 ```
 
-
 ```{r, echo = FALSE}
 p_alle
 ```
-
