@@ -85,9 +85,9 @@ Dabei zeigt sich:
 
 ### Anwendung und Aggregation
 
-Das Modell wurde um eine zuverlässige Erkennung im Rahmen seiner Restriktionen zu ermöglichen jeweils auf ein Kontextfenster von **drei aufeinanderfolgenden Sätzen** angewendet. Die Ergebnisse wurden anschließend auf die Redenebene aggregiert:
+Um eine zuverlässige Erkennung im Rahmen seiner Restriktionen zu ermöglichen, wurde das Modell jeweils auf ein Kontextfenster von **drei aufeinanderfolgenden Sätzen** angewendet. Die Ergebnisse wurden anschließend auf die Redenebene aggregiert:
 
-1.  **Zuweisung:** Eine Rede wurde einem oder mehreren Themen zugeordnet, wenn diese entweder am häufigsten kodiert wurden oder mindestens **40 %** der Dreisatz-Einheiten eines der Themen aufwiesen.
+1.  **Zuweisung:** Eine Rede wurde einem oder mehreren Themen zugeordnet, wenn diese entweder am häufigsten kodiert wurden, mindestens ein Drittel der kodierten Dreisatz-Einheiten auf eines der Themen entfielen oder mindestens 15 Dreisatz-Einheiten einer Rede dem Thema zugeordnet wurden.
 
 2.  **Gewichtung:** Um der stark divergierenden Länge der Reden Rechnung zu tragen, dient nicht die reine Anzahl der Reden als Maßzahl. Stattdessen wurde der **Anteil der Wörter** dieser Reden an der Gesamtwortzahl des (Sub-)Korpus berechnet.
 
@@ -95,7 +95,7 @@ Das Modell wurde um eine zuverlässige Erkennung im Rahmen seiner Restriktionen 
 
 ## Themenverteilung der Reden im Bundestag
 
-Ein Blick auf die Rangliste der am häufigsten adressierten Politikfelder im Bundestag verdeutlicht, dass die Verkehrspolitik in keiner der untersuchten Legislaturperioden in den Top 10 vertreten ist. Tatsächlich schwankt der Anteil der verkehrspolitischen Reden zwischen 2 und 3 Prozent des Gesamtkorpus. Mit Rang 11 und einem Anteil von 3,2 bzw. 3,1 Prozent wurde das Thema in der 14. und 15. Legislaturperiode (der rot-grünen Regierungszeit zwischen 1998 und 2005) am intensivsten diskutiert. Besonders häufig findet indes der Code „Öffentliche Verwaltung“ Erwähnung, der vor allem die prozeduralen Elemente der parlamentarischen Arbeit erfasst. Die insgesamt am häufigsten besprochenen Politikfelder sind die Außen-, Wirtschafts- und Sozialpolitik.
+Ein Blick auf die Rangliste der am häufigsten adressierten Politikfelder im Bundestag verdeutlicht, dass die Verkehrspolitik in keiner der untersuchten Legislaturperioden in den Top 10 vertreten ist. Tatsächlich schwankt der Anteil der verkehrspolitischen Reden zwischen 2 und 4 Prozent des Gesamtkorpus. Mit Rang 12 und einem Anteil von jeweils 3,8 Prozent wurde das Thema in der 14. und 15. Legislaturperiode (der rot-grünen Regierungszeit zwischen 1998 und 2005) am intensivsten diskutiert. Besonders häufig findet indes der Code „Öffentliche Verwaltung“ Erwähnung, der vor allem die prozeduralen Elemente der parlamentarischen Arbeit erfasst. Die insgesamt am häufigsten besprochenen Politikfelder sind die Außen-, Wirtschafts- und Sozialpolitik.
 
 ```{r, echo = FALSE}
 # Kategorien automatisch aus share_* Spalten extrahieren
@@ -106,7 +106,8 @@ categories <- names(bt_corp_filtered) |>
 # Ausdrucks-Generator pro Kategorie
 make_cat_exprs <- function(cat) {
   share_var <- sym(paste0("share_", cat))
-  cond <- expr(str_detect(dominant_cat, fixed(!!cat)) | !!share_var >= 0.4)
+  n_var <- sym(paste0("n_", cat))
+  cond <- expr(str_detect(dominant_cat, fixed(!!cat)) | !!share_var >= 0.3333 | !!n_var >= 15)
 
   list2(
     !!paste0("words_", cat) := expr(sum(words_speech[!!cond], na.rm = TRUE)),
@@ -192,7 +193,7 @@ lp_topicrank |>
 
 ### Themenkonjunktur der Verkehrspolitik
 
-Inwiefern sich der Anteil verkehrspolitischer Reden im Bundestag im Zeitverlauf verändert hat und welche Debatten dazu beitragen, lässt sich präzise im Monatsverlauf ablesen. In der oberen Grafik ist der Anteil für jeden Monat sowie der allgemeine Trend dargestellt. Dabei zeigt sich, dass Verkehrspolitik insbesondere in der Mitte der Legislaturperioden überdurchschnittlich häufig thematisiert wird. Die Monate mit den höchsten Anteilen sind der März 1992 (15,1 %), der Dezember 1997 (11,3 %) und der Januar 2001 (11 %). Aus den letzten zehn Jahren sticht der Februar 2023 mit 10,3 % hervor.
+Inwiefern sich der Anteil verkehrspolitischer Reden im Bundestag im Zeitverlauf verändert hat und welche Debatten dazu beitragen, lässt sich präzise im Monatsverlauf ablesen. In der oberen Grafik ist der Anteil für jeden Monat sowie der allgemeine Trend dargestellt. Dabei zeigt sich, dass Verkehrspolitik insbesondere in der Mitte der Legislaturperioden überdurchschnittlich häufig thematisiert wird. Die Monate mit den höchsten Anteilen sind der März 1992 (16,6 %), der Februar 2023 (13,1 %) und der Dezember 1997 (12,6 %).
 
 ```{r, echo = FALSE}
 lp_starts <- bt_corp %>%
@@ -209,12 +210,14 @@ transport_monthly <- bt_corp_filtered %>%
     n_speeches = n(),
     n_transport = sum(
       Transportation_dominant == TRUE |
-        share_Transportation >= 0.4,
+        share_Transportation >= 0.3333 | 
+        n_Transportation >= 15,
       na.rm = TRUE
     ),
     pct_transport = mean(
       Transportation_dominant == TRUE |
-        share_Transportation >= 0.4,
+        share_Transportation >= 0.3333 | 
+        n_Transportation >= 15,
       na.rm = TRUE
     ) *
       100,
@@ -223,7 +226,8 @@ transport_monthly <- bt_corp_filtered %>%
     words_transport = sum(
       words_speech[
         Transportation_dominant == TRUE |
-          share_Transportation >= 0.4
+        share_Transportation >= 0.3333 | 
+        n_Transportation >= 15
       ],
       na.rm = TRUE
     ),
@@ -320,12 +324,14 @@ transport_yearly <- bt_corp_filtered %>%
     n_speeches = n(),
     n_transport = sum(
       Transportation_dominant == TRUE |
-        share_Transportation >= 0.4,
+        share_Transportation >= 0.3333 | 
+        n_Transportation >= 15,
       na.rm = TRUE
     ),
     pct_transport = mean(
       Transportation_dominant == TRUE |
-        share_Transportation >= 0.4,
+        share_Transportation >= 0.3333 | 
+        n_Transportation >= 15,
       na.rm = TRUE
     ) *
       100,
@@ -334,7 +340,8 @@ transport_yearly <- bt_corp_filtered %>%
     words_transport = sum(
       words_speech[
         Transportation_dominant == TRUE |
-          share_Transportation >= 0.4
+        share_Transportation >= 0.3333 | 
+        n_Transportation >= 15
       ],
       na.rm = TRUE
     ),
@@ -348,7 +355,8 @@ transport_yearly <- bt_corp_filtered %>%
 transportation_filtered <- bt_corp_filtered %>%
   filter(
     (Transportation_dominant == TRUE |
-      share_Transportation > 0.3999) &
+        share_Transportation >= 0.3333 | 
+        n_Transportation >= 15) &
       (anteil_ampel < 0.035)
   )
 
@@ -490,7 +498,7 @@ Inwiefern externe Faktoren einen Einfluss auf die Thematisierung im Bundestag ha
 
 #### Einfluss des Stauvolumens auf das Debattenvolumen
 
-Die Grafik untersucht explorativ den Zusammenhang zwischen der ADAC-Staustatistik als externem Belastungsfaktor und dem Anteil verkehrspolitischer Reden im Bundestag. Während das Thematisierungsvolumen im Zeitverlauf deutliche Spitzen von über 3 % erreichte, zeigen die Staudaten ab 2015 eine differenzierte Entwicklung mit einem Höchststand der Meldungen im Jahr 2018. Besonders auffällig ist das Jahr 2020, in dem trotz pandemiebedingt massiv sinkender Stauzahlen die parlamentarische Aufmerksamkeit mit 3,27 % hoch blieb. Methodische Umstellungen beim ADAC ab Juni 2022 erschweren zwar den direkten Vergleich der Folgejahre, doch korreliert das hohe Diskussionsniveau von 2023 (3,26 %) mit der wieder gestiegenen Staudauer von über 427.000 Stunden.
+Die Grafik untersucht explorativ den Zusammenhang zwischen der ADAC-Staustatistik als externem Belastungsfaktor und dem Anteil verkehrspolitischer Reden im Bundestag. Während das Thematisierungsvolumen im Zeitverlauf deutliche Spitzen von über 4 % erreichte, zeigen die Staudaten ab 2015 eine differenzierte Entwicklung mit einem Höchststand der Meldungen im Jahr 2018. Besonders auffällig ist das Jahr 2020, in dem trotz pandemiebedingt massiv sinkender Stauzahlen die parlamentarische Aufmerksamkeit mit 3,6 % hoch blieb. Methodische Umstellungen beim ADAC ab Juni 2022 erschweren zwar den direkten Vergleich der Folgejahre, doch korreliert das hohe Diskussionsniveau von 2023 (3,8 %) mit der wieder gestiegenen Staudauer von über 427.000 Stunden.
 
 ```{r, echo = FALSE, message = FALSE, warning = FALSE}
 stau <- read_csv(
@@ -578,7 +586,7 @@ plot_ly(transport_yearly4 %>% filter(year < 2025), x = ~year) |>
 
 #### Zusammenhang zwischen Debattenvolumen und Prioritäten im Bundeshaushalt (Einzelplan 12)
 
-Die Analyse der Haushaltsdaten verdeutlicht, dass der Anteil des Einzelplans 12 am Gesamthaushalt über Jahrzehnte hinweg eine bemerkenswerte Stabilität aufweist, wobei der Soll-Anteil zumeist zwischen 7 % und 11 % fluktuiert. Ein direkter Gleichlauf zwischen dem parlamentarischen Diskussionsvolumen und den Haushaltsanteilen lässt sich nur punktuell feststellen, wie etwa beim Anstieg der Debattenintensität um das Jahr 2001 (4,46 %), der mit stabil hohen Ausgabenanteilen von über 10 % korrespondierte. In der jüngeren Betrachtung ab 2012, für die eine präzise Abgrenzung rein verkehrsrelevanter Titel vorliegt, zeigt sich eine hohe Resilienz des Budgets gegenüber kurzfristigen Debattenschwankungen. Selbst im Pandemiejahr 2020 sank der Ist-Anteil am Haushalt auf 6,66 %, während die parlamentarische Aufmerksamkeit für Verkehrsthemen untypisch hoch blieb. Auffällig ist die Entwicklung im Jahr 2024, in dem der Ist-Anteil auf 9,22 % anstieg, obwohl das Thematisierungsvolumen im Bundestag mit 2,08 % eher unterdurchschnittlich ausfiel. Dies deutet darauf hin, dass die Budgetallokation im Verkehrsbereich primär durch langfristige Investitionszyklen und infrastrukturelle Verpflichtungen bestimmt wird und weniger auf tagesaktuelle parlamentarische Konjunkturen reagiert. Die methodischen Brüche in der Ressortzuständigkeit zwischen 1999 und 2011 erschweren zwar die Detailanalyse, ändern jedoch nichts an der Erkenntnis, dass der Verkehrsbereich eine fiskalische Konstante darstellt, die weitgehend entkoppelt von der variablen Intensität öffentlicher Debatten agiert.
+Die Analyse der Haushaltsdaten verdeutlicht, dass der Anteil des Einzelplans 12 am Gesamthaushalt über Jahrzehnte hinweg eine bemerkenswerte Stabilität aufweist, wobei der Soll-Anteil zumeist zwischen 7 % und 11 % fluktuiert. Ein direkter Gleichlauf zwischen dem parlamentarischen Diskussionsvolumen und den Haushaltsanteilen lässt sich nur punktuell feststellen, wie etwa beim Anstieg der Debattenintensität um das Jahr 2001 (5 %), der mit stabil hohen Ausgabenanteilen von über 10 % korrespondierte. In der jüngeren Betrachtung ab 2012, für die eine präzise Abgrenzung rein verkehrsrelevanter Titel vorliegt, zeigt sich eine hohe Resilienz des Budgets gegenüber kurzfristigen Debattenschwankungen. Selbst im Pandemiejahr 2020 sank der Ist-Anteil am Haushalt auf 6,66 %, während die parlamentarische Aufmerksamkeit für Verkehrsthemen untypisch hoch blieb. Auffällig ist die Entwicklung im Jahr 2024, in dem der Ist-Anteil auf 9,22 % anstieg, obwohl das Thematisierungsvolumen im Bundestag mit 2,2 % eher unterdurchschnittlich ausfiel. Dies deutet darauf hin, dass die Budgetallokation im Verkehrsbereich primär durch langfristige Investitionszyklen und infrastrukturelle Verpflichtungen bestimmt wird und weniger auf tagesaktuelle parlamentarische Konjunkturen reagiert. Die methodischen Brüche in der Ressortzuständigkeit zwischen 1999 und 2011 erschweren zwar die Detailanalyse, ändern jedoch nichts an der Erkenntnis, dass der Verkehrsbereich eine fiskalische Konstante darstellt, die weitgehend entkoppelt von der variablen Intensität öffentlicher Debatten agiert.
 
 ```{r, echo = FALSE, warning = FALSE, message = FALSE}
 anteil_epl12 <- read_csv2(
