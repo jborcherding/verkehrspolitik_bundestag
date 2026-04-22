@@ -38,7 +38,7 @@ bt_corp_filtered <- bt_corp %>%
 
 Um verkehrspolitische Reden im **GermaParl-Korpus** zu identifizieren, wurde das Klassifikationsmodell [`parlbert-topic-german`](https://huggingface.co/chkla/parlbert-topic-german) eingesetzt. Dieses Modell basiert auf Sätzen, die nach dem Codebuch des **Comparative Agendas Project** kodiert und zum Training des Modells genutzt wurden.
 
-Die folgende Übersicht der Codes illustriert die erfassten Themenbereiche; die Untercodes vermitteln dabei ein basales Verständnis der thematischen Zuschnitte. Detaillierte Informationen sind im Codebuch (deutsche Version: [PDF](https://www.gpa.uni-konstanz.de/securedl/sdl-eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NzQyNTkwMjYsImV4cCI6MTc3NDk1MDIyNiwidXNlciI6MCwiZ3JvdXBzIjpbMCwtMV0sImZpbGUiOiJmaWxlYWRtaW4vcG9sdmVyL2FnLWJyZXVuaWcvY2FwL0NBUGNvZGVib29rX3YzLnBkZiIsInBhZ2UiOjE2MDA4Nn0.gDOzExTYTv9Rg8eIeF8UH6vHsq2ZwqeVQqGU1PwoUFA/CAPcodebook_v3.pdf)) hinterlegt.
+Die folgende Übersicht der Codes illustriert die erfassten Themenbereiche; die Untercodes vermitteln dabei ein basales Verständnis der thematischen Zuschnitte. Detaillierte Informationen sind im Codebuch (deutsche Version: [PDF](https://www.gpa.uni-konstanz.de/data/)) hinterlegt.
 
 ```{r, echo = FALSE}
 cap <- readxl::read_xlsx(
