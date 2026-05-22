@@ -8,8 +8,8 @@ website:
         text: Start
       - href: Erste_Erkenntnisse.qmd
         text: Erste Erkenntnisse
-      - href: debatten_themen.qmd
-        text: Debatten-Themen     # ← neu
+      - href: verkehrsdebatte_themen.html
+        text: Debatten-Themen
 
 format:
   html:
