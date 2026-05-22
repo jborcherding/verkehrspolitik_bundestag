@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bundestagsdebatten – Verkehrsträger im Wandel</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=IBM+Plex+Mono:wght@300;400;500&family=IBM+Plex+Sans:wght@300;400;500&display=swap');
+
+  :root {
+    --bg: #0e0e0e;
+    --surface: #161616;
+    --border: #2a2a2a;
+    --text: #e8e4dc;
+    --muted: #7a7570;
+    --luft: #6ba3c4;
+    --schiene: #c97e4a;
+    --schiff: #5ea88a;
+    --strasse: #c4a84a;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-weight: 300;
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  header {
+    border-bottom: 1px solid var(--border);
+    padding: 3rem 4rem 2.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 2rem;
+  }
+
+  header h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(1.8rem, 3vw, 2.8rem);
+    font-weight: 900;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+  }
+
+  header p {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--muted);
+    text-align: right;
+    max-width: 320px;
+    line-height: 1.8;
+  }
+
+  .legend {
+    display: flex;
+    gap: 2rem;
+    padding: 1rem 4rem;
+    border-bottom: 1px solid var(--border);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    opacity: 0.5;
+    transition: opacity 0.2s;
+    user-select: none;
+  }
+  .legend-item.active { opacity: 1; }
+  .legend-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+  .timeline { padding: 0 4rem 6rem; }
+
+  .year-block {
+    border-bottom: 1px solid var(--border);
+    display: grid;
+    grid-template-columns: 80px 1fr;
+  }
+
+  .year-label {
+    padding: 2rem 1.5rem 2rem 0;
+    font-family: 'Playfair Display', serif;
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--muted);
+    border-right: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    align-self: start;
+  }
+
+  .year-entries {
+    padding: 1.2rem 0 1.2rem 2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+  }
+
+  .entry {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    transition: opacity 0.3s;
+  }
+  .entry.hidden { display: none; }
+
+  .entry-main {
+    display: grid;
+    grid-template-columns: 90px 1fr;
+    gap: 0;
+    align-items: start;
+  }
+
+  .traeger-tag {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.63rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 0.2rem 0.5rem;
+    border-radius: 2px;
+    font-weight: 500;
+    white-space: nowrap;
+    margin-top: 0.2rem;
+    width: fit-content;
+  }
+  .traeger-tag.Luft    { color: var(--luft);    border: 1px solid var(--luft);    background: rgba(107,163,196,0.06); }
+  .traeger-tag.Schiene { color: var(--schiene);  border: 1px solid var(--schiene);  background: rgba(201,126,74,0.06); }
+  .traeger-tag.Schiff  { color: var(--schiff);   border: 1px solid var(--schiff);   background: rgba(94,168,138,0.06); }
+  .traeger-tag.Straße  { color: var(--strasse);  border: 1px solid var(--strasse);  background: rgba(196,168,74,0.06); }
+
+  .entry-right { display: flex; flex-direction: column; gap: 0.35rem; }
+
+  .topics {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    align-items: center;
+  }
+
+  .topic-pill {
+    font-size: 0.8rem;
+    padding: 0.15rem 0.55rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    line-height: 1.5;
+  }
+  .topic-pill.primary { font-weight: 500; font-size: 0.85rem; background: transparent; }
+  .topic-pill.primary.Luft    { border-color: rgba(107,163,196,0.4); color: var(--luft); }
+  .topic-pill.primary.Schiene { border-color: rgba(201,126,74,0.4);  color: var(--schiene); }
+  .topic-pill.primary.Schiff  { border-color: rgba(94,168,138,0.4);  color: var(--schiff); }
+  .topic-pill.primary.Straße  { border-color: rgba(196,168,74,0.4);  color: var(--strasse); }
+
+  /* Source toggle button */
+  .source-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.1rem 0;
+    transition: color 0.15s;
+    width: fit-content;
+  }
+  .source-toggle:hover { color: var(--text); }
+  .source-toggle svg {
+    transition: transform 0.2s;
+    flex-shrink: 0;
+  }
+  .source-toggle.open svg { transform: rotate(90deg); }
+  .source-toggle.open { color: var(--text); }
+
+  /* Source panel */
+  .source-panel {
+    display: none;
+    margin-top: 0.4rem;
+    padding: 0.75rem 1rem;
+    background: #111;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.68rem;
+    color: var(--muted);
+    line-height: 1.9;
+  }
+  .source-panel.open { display: block; }
+
+  .source-row { display: flex; gap: 0.6rem; align-items: baseline; flex-wrap: wrap; }
+  .source-label {
+    font-size: 0.58rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #444;
+    white-space: nowrap;
+    min-width: 60px;
+  }
+  .source-words { color: #9a9590; }
+
+  .source-words .hw {
+    padding: 0.05rem 0.3rem;
+    border-radius: 2px;
+    margin: 0 1px;
+    font-weight: 500;
+  }
+  .hw.Luft    { color: var(--luft);    background: rgba(107,163,196,0.1); }
+  .hw.Schiene { color: var(--schiene); background: rgba(201,126,74,0.1); }
+  .hw.Schiff  { color: var(--schiff);  background: rgba(94,168,138,0.1); }
+  .hw.Straße  { color: var(--strasse); background: rgba(196,168,74,0.1); }
+
+  .source-divider { border: none; border-top: 1px solid #222; margin: 0.4rem 0; }
+
+  .word-share-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.3rem;
+  }
+  .ws-label { font-size: 0.58rem; color: #444; text-transform: uppercase; letter-spacing: 0.08em; }
+  .ws-track {
+    flex: 1;
+    height: 3px;
+    background: #222;
+    border-radius: 2px;
+    max-width: 120px;
+  }
+  .ws-fill { height: 100%; border-radius: 2px; }
+  .ws-value { font-size: 0.62rem; color: #555; }
+
+  .no-topic { font-size: 0.78rem; color: var(--muted); font-style: italic; }
+
+  @media (max-width: 700px) {
+    header { padding: 2rem 1.5rem 1.5rem; flex-direction: column; align-items: flex-start; }
+    header p { text-align: left; max-width: 100%; }
+    .legend { padding: 1rem 1.5rem; flex-wrap: wrap; gap: 1rem; }
+    .timeline { padding: 0 1.5rem 4rem; }
+    .year-label { font-size: 1.1rem; }
+    .entry-main { grid-template-columns: 70px 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Bundestagsdebatten<br>zu Verkehrsträgern<br><span style="color:var(--muted)">1991 – 2024</span></h1>
+  <p>Themen rekonstruiert aus TF-IDF-Wortgewichten<br>der Plenarprotokolle. Klick auf <strong style="color:#666">„Quellwörter"</strong><br>zeigt die Rohdaten je Eintrag.</p>
+</header>
+
+<div class="legend" id="legend">
+  <div class="legend-item active" data-filter="Luft">
+    <div class="legend-dot" style="background:var(--luft)"></div> Luft
+  </div>
+  <div class="legend-item active" data-filter="Schiene">
+    <div class="legend-dot" style="background:var(--schiene)"></div> Schiene
+  </div>
+  <div class="legend-item active" data-filter="Schiff">
+    <div class="legend-dot" style="background:var(--schiff)"></div> Schiff
+  </div>
+  <div class="legend-item active" data-filter="Straße">
+    <div class="legend-dot" style="background:var(--strasse)"></div> Straße
+  </div>
+</div>
+
+<div class="timeline" id="timeline"></div>
+
+<script>
+// Raw CSV data: [year, traeger, top_freq_words, top_words (TF-IDF), word_share, topics[]]
+const raw = [
+  [1991,"Luft","flughafen, bgs","bgs, flughafen",3.1,[]],
+  [1991,"Schiene","bundesbahn, bundesländern, milliarden, deutsche, deutschen, bahn, verkehrspolitik, ländern","bundesbahn, reichsbahn, bundesländern, ddr, gesamtdeutschen, strukturreform, regionalisierung, öpnv",19.9,["Bahnreform: Zusammenführung Bundesbahn & Reichsbahn","Verkehrspolitik nach Wiedervereinigung","Strukturreform & Regionalisierung Schiene"]],
+  [1991,"Schiff","bremen, deutschen, werften, millionen, ausbau","bremen, altbundesländern, werften, werftindustrie, binnenschiffahrt, seeschiffahrt, elbe, subventionen",9.9,["Werftsubventionen & Werftindustrie","Elbe-Schifffahrt","Binnenschifffahrt Ost-West"]],
+  [1991,"Straße","autobahnen, tempolimit, straßen, verkehrspolitik, maßnahmen, umwelt","tempolimit, töpfer, autobahnen, umweltpolitik, tempolimits, geschwindigkeitsbegrenzung",29.0,["Tempolimit-Debatte","Autobahn-Ausbau Ostdeutschland","Umweltpolitik im Straßenverkehr"]],
+
+  [1992,"Luft","flugsicherung, maßnahmen, europäischen, gesetz, lufthansa","flugsicherung, luftverkehrskontrolle, luftraum, lufthansa, organisationsprivatisierung, flugverkehrs, bundesanstalt",7.6,["Reform & Privatisierung der Flugsicherung","Luftraumorganisation","Lufthansa-Regulierung"]],
+  [1992,"Schiene","bahn, schiene, verkehrspolitik, milliarden, verkehr","bundesbahn, stendal, reichsbahn, öpnv, bahnreform",20.7,["Vorbereitungen Bahnreform","Stendal-Streckenprojekte","ÖPNV-Regionalisierung"]],
+  [1992,"Schiff","elbe, werften, mecklenburg, vorpommern, millionen","werften, elbe, elbsanierung, treuhand, wasserqualität",9.9,["Elbe-Sanierung & Wasserqualität","Werften (Treuhand, Privatisierung Ost)"]],
+  [1992,"Straße","verkehrspolitik, straßen, bahn, schiene","tempolimit, elektrofahrzeuge, elektrofahrzeugen, geschwindigkeitsbegrenzung, enquete, autobahnen",36.6,["Tempolimit-Debatte (Fortsetzung)","Elektrofahrzeuge (erste Diskussion)","Enquete-Kommission Verkehr"]],
+
+  [1993,"Luft","zukünftig","zukünftig",1.7,[]],
+  [1993,"Schiene","bahn, bahnreform, milliarden, verkehrspolitik, bundesbahn, schiene","bahnreform, reichsbahn, bundesbahn, regionalisierung, eisenbahner, öpnv, strukturreform",29.5,["Bahnreform (Umsetzungsgesetz)","Zusammenführung Bundesbahn/Reichsbahn","ÖPNV-Regionalisierung"]],
+  [1993,"Schiff","binnenschiffahrt, elbe, schiffe, tanker, saale","binnenschiffahrt, tanker, saale, shetlandinseln, elbe, braer",16.6,["Binnenschifffahrt","Tanker-Unfälle (Braer/Shetland)","Elbe & Saale Wasserstraßen"]],
+  [1993,"Straße","milliarden, verkehrspolitik","promille, verkehrssicherheit, investitionsmaßnahmengesetz",26.5,["Promillegrenze im Straßenverkehr","Verkehrssicherheit"]],
+
+  [1994,"Luft","lufthansa, bahn, transrapid","lufthansa, transrapid, bahn",3.7,["Lufthansa-Strategie","Transrapid als Lufthansa-Alternative"]],
+  [1994,"Schiene","transrapid, berlin, bahn, hamburg, strecke, milliarden, ice","transrapid, finanzierungskonzept, magnetschwebebahn, ice, betriebsgesellschaft, magnetschwebebahnplanungsgesetz",31.6,["Transrapid Berlin–Hamburg (Planungsgesetz)","Magnetschwebebahn-Projekt","ICE-Netz-Erweiterung"]],
+  [1994,"Schiff","europa, donau","donau, europa",2.7,[]],
+  [1994,"Straße","promille, verkehr, promillegrenze","promille, promillegrenze, 0,8, atemalkohol, 0,5, alkohol, 0,3, alkoholeinfluß, vignette",35.6,["Promillegrenze-Absenkung (0,8 → 0,5)","Alkohol am Steuer","Pkw-Vignette (Diskussion)"]],
+
+  [1995,"Luft","flughäfen, berlin, flughafen, standort, brandenburg","sperenberg, flughäfen, schönefeld, lufthansa, großflughafen, flughafen, brandenburg",10.5,["Flughafenplanung Berlin (Sperenberg vs. Schönefeld)","Lufthansa & Standortfragen"]],
+  [1995,"Schiene","bahn, milliarden, berlin, transrapid, strecke, ice","transrapid, dreijahresplan, ingolstadt, lehrter, ice, strecke",30.0,["Transrapid-Finanzierung","Dreijahresplan Schiene","ICE-Ausbau"]],
+  [1995,"Schiff","donau, schiff, ausbau, elbe","donau, zweitregister, binnenschiffahrt",12.0,["Donau-Ausbau","Elbe-Fahrrinne","Zweitregister für Seeschiffe"]],
+  [1995,"Straße","milliarden, verkehr","mikrogramm, promille, alkohol, ozonkonzentrationen, tempolimit, kraftfahrzeugsteuer",22.5,["Ozon & Feinstaubwerte (Umwelt)","Promillegrenze","Kraftfahrzeugsteuer-Reform"]],
+
+  [1996,"Luft","flughafen","flughafen",2.5,[]],
+  [1996,"Schiene","bahn, milliarden, transrapid, strecke, berlin, schiene","transrapid, ingolstadt, kombinierten, nürnberg, ice, magnetschwebebahn",23.0,["Transrapid-Ausbauplanung","Kombinierter Verkehr Schiene/Straße","ICE-Netz"]],
+  [1996,"Schiff","werften, binnenschiffahrt, vulkan, elbe, wirtschaft, ausbau","vulkan, bvs, binnenschiffahrt, werften, schiffbau, elbe, donau",23.1,["Vulkan-Werft-Insolvenz","Schiffbau-Subventionen","Elbe & Donau-Wasserstraßen"]],
+  [1996,"Straße","verkehr, telematik, lkw, pkw, straße, kosten, kfz","telematik, vignette, kfz, autobahnvignette, roadpricing, drogen",28.6,["Telematik im Verkehr (erste Debatte)","Road Pricing / Autobahnvignette","LKW/PKW-Regulierung"]],
+
+  [1997,"Luft","flughäfen, lärm, fluglärm, flugzeug, landeplatzverordnung","landeplatzverordnung, fluglärm, flughäfen, lärm, flugzeug",3.8,["Fluglärm an Flughäfen","Landeplatzverordnung (Kleinflugplätze)"]],
+  [1997,"Schiene","bahn, milliarden, strecke, schiene, transrapid","wissmann, transrapid, bahn, bahnreform, fahrweg, strecke",38.3,["Transrapid-Finanzierungsdiskussion","Fahrwegfinanzierung Bahn","Bahnreform-Bilanz"]],
+  [1997,"Schiff","donau, tonnen, kombinierten, binnenschiffahrt","donau, containerverkehr, binnenschiffahrt, seeschiffahrt, kombinierten, tonnen",5.6,["Binnenschifffahrt & Donau-Containerverkehr"]],
+  [1997,"Straße","kinder, promille, frauen, auto, straße","promille, kinder, 0,8, frauen, 0,5, eltern, alkohol, drogen, führerschein",26.8,["Promillegrenze (endgültige Absenkung auf 0,5)","Kindersicherheit im Verkehr","Führerschein & Drogen"]],
+
+  [1998,"Luft",null,null,null,[]],
+  [1998,"Schiene","bahn, transrapid, schiene, milliarden, berlin, strecke, verkehrspolitik","transrapid, brenner, alpen, öpnv, bahn, magnetbahn",32.6,["Transrapid München-Diskussion","Brenner-Achse Schienenpolitik","ÖPNV-Finanzierung"]],
+  [1998,"Schiff","free, tax, fahrrinnentiefe","free, tax, fahrrinnentiefe, butterfahrten, vilshofen, oceanic, pallas",11.5,["Butterfahrten-Regelung (Free-Tax)","Elbe-Fahrrinne (Vilshofen)","Havarie Pallas (Vorbereitung)"]],
+  [1998,"Straße","bahn, schiene, brenner, verkehr, straße, verkehrspolitik","brenner, blockade, telematik, blockaden, tirol, österreich, alpenraum",27.6,["Brenner-Korridor & Alpentransit-Blockaden","Telematik im Straßenverkehr"]],
+
+  [1999,"Luft","altersgrenze","altersgrenze",2.5,[]],
+  [1999,"Schiene","bahn, milliarden, schiene, transrapid, investitionen","eschede, transrapid, ökosteuer, bahn, ice, radsätze",28.8,["ICE-Unglück Eschede (Aufarbeitung, Radsätze)","Transrapid-Entscheidung","Ökosteuer und Bahnfinanzierung"]],
+  [1999,"Schiff","pallas, werften, schiffbau, havarie","pallas, schiffbau, werften, havarie, oceanic, korea, werftindustrie",11.8,["Havarie Pallas (Nordsee)","Werften & Schiffbau (Konkurrenz Korea)","Internationale Schiffbau-Abkommen"]],
+  [1999,"Straße","milliarden, schiene, investitionen, haushalt","ausbauplan, bundesfernstraßen, autobahn, ökosteuer, investitionsprogramm",24.1,["Bundesfernstraßen-Ausbaupläne","Ökosteuer-Lenkungswirkung","Investitionsprogramm Ostdeutschland"]],
+
+  [2000,"Luft","luftverkehr, china, europäischen, flughäfen, flugsicherung, volksrepublik","volksrepublik, flugsicherungsdienste, taiwan, flugsicherung, china, verspätungen, airlines",4.4,["Luftverkehrsabkommen mit China/Taiwan","Flugsicherungsreform","Verspätungen & Airline-Regulierung"]],
+  [2000,"Schiene","bahn, milliarden, transrapid, strecke, berlin, hamburg","transrapid, versuchsanlage, mehdorn, strecke, ilmenau, emsland, referenzstrecke",29.9,["Transrapid-Entscheidung (Versuchsanlage Emsland)","Mehdorn-Ära Deutsche Bahn","Trassenpreise & Wettbewerb"]],
+  [2000,"Schiff","werften, korea, schiffbau, pallas","werften, korea, pallas, schiffbau, südkorea, seewache, küstenwache, havarie",9.0,["Werftenkrise & Korea-Konkurrenz","Aufarbeitung Havarie Pallas","Küstenwache Konzept"]],
+  [2000,"Straße","milliarden, ökosteuer, verkehr, stau","ökosteuer, investitionsprogramm, entfernungspauschale, stau",22.6,["Ökosteuer-Wirkung auf Verkehr","Staubekämpfung & Investitionsprogramm","Entfernungspauschale"]],
+
+  [2001,"Luft","flugzeug, schiene","flugzeug, schiene",2.7,[]],
+  [2001,"Schiene","bahn, schiene, milliarden, netz, strecke, wettbewerb","bodewig, trennung, mehdorn, netz, bahn, cargo, bahnreform",31.1,["Bahn-Netz-Trennung (Diskussion)","Wettbewerb im Schienenverkehr","Bahnreform-Weiterentwicklung"]],
+  [2001,"Schiff","binnenschifffahrt, werften, küste, ostsee, pallas","werften, binnenschifffahrt, pallas, korea, schiffbau, koreaner",9.0,["Werftenkrise (Korea-Dumping)","Binnenschifffahrtsförderung","Aufarbeitung Pallas"]],
+  [2001,"Straße","lkw, maut, milliarden, straße","pällmann, maut, lkw, ökosteuer",33.2,["LKW-Maut (Einführungsplanung)","Pällmann-Kommission (Straßenfinanzierung)"]],
+
+  [2002,"Luft","flughafen, luftverkehr, schweiz, bevölkerung, pisten, zürich","pisten, zürich, schweiz, flughafen, luftverkehr, bevölkerung",4.8,["Fluglärm Zürich/Kloten (deutsch-schweizer Konflikt)","Flugsicherung über Süddeutschland"]],
+  [2002,"Schiene","bahn, milliarden, schiene, euro, strecke, investitionen","bodewig, transrapid, erfurt, stoiber, bahn, vde",20.9,["Transrapid München","VDE-Projekte (Verkehrsprojekte Deutsche Einheit)","Schienennetz-Investitionen"]],
+  [2002,"Schiff","werften, donau, ausbau, binnenschifffahrt, variante","werften, donau, variante, schiffbau, havariekommando",20.3,["Donau-Ausbau (Varianten)","Werftensubventionen","Havariekommando (nach Pallas)"]],
+  [2002,"Straße","euro, milliarden, maut, lkw","weißbuch, maut, euro, lkw",16.4,["LKW-Maut-Einführung (Toll Collect)","EU-Weißbuch Verkehr"]],
+
+  [2003,"Luft","zürich, rechtsverordnung, schweiz, flughafen, flugsicherung","zürich, kloten, rechtsverordnung, zivilluftfahrt, flugsicherung, staatsvertrag, schweiz",3.5,["Zürich-Fluglärm (Staatsvertrag)","Flugsicherungsrechtsreform"]],
+  [2003,"Schiene","euro, bahn, milliarden, schiene, strecke, berlin, hamburg","metrorapid, stolpe, transrapid, mehdorn, börsengang, referenz, osterweiterung",26.7,["Transrapid München (Referenzstrecke)","Bahn-Börsengang (Vorbereitung)","Osterweiterung & Schiene"]],
+  [2003,"Schiff","ostsee, prestige, kadetrinne, sicherheit","prestige, kadetrinne, einhüllentanker, ostsee, havariekommando, seesicherheit, tanker, imo",5.7,["Havarie Prestige (Ostsee/Tanker)","Kadetrinne-Sicherheit","Havariekommando & IMO"]],
+  [2003,"Straße","maut, euro, lkw, straße, bundesverkehrswegeplan","maut, osterweiterung, stolpe, lkw, euro, verkehrsinfrastrukturfinanzierungsgesellschaft, bundesverkehrswegeplan",30.7,["Maut-Einführung LKW (Verzögerungen Toll Collect)","Bundesverkehrswegeplan 2003"]],
+
+  [2004,"Luft","luftverkehr, flughafen, flughäfen, luftfahrt, flugsicherung","luftverkehrswirtschaft, flugsicherung, flughafens, flughafen, luftfahrt, luftverkehr",5.2,[]],
+  [2004,"Schiene","bahn, euro, schiene, milliarden, bahnreform, investitionen","koch, steinbrück, bahnreform, euro, trassenagentur, mehdorn, bahnübergängen, bahn, börsengang",27.2,["Bahn-Reform (2. Stufe / Börsengang)","Trassenpreise & Regulierung","Unbeschrankte Bahnübergänge"]],
+  [2004,"Schiff","häfen, werften, wirtschaft, schiffe","werften, häfen, küstenwache, korea, schiffbau, cgt, hafenanlagen",11.6,["Hafenentwicklung","Werftenkrise & Korea-Konkurrenz","Küstenwache"]],
+  [2004,"Straße","euro, milliarden, investitionen, maut","koch, steinbrück, stolpe, euro, maut, toten",21.6,["LKW-Maut (Einführung & Toll Collect)","Investitionen Straßennetz","Verkehrstote & Sicherheit"]],
+
+  [2005,"Luft","flughäfen, flugverkehr, luftverkehr, luftverkehrsstandort","hindernisfreiheit, luftverkehrsstandort, kioto, flughäfen, kerosinsteuer, fluglärm, billigflieger",9.5,["Kerosinsteuer-Debatte","Fluglärm & Flughafenausbau","Billigflieger-Regulierung","Kyoto & Luftverkehr-Emissionen"]],
+  [2005,"Schiene","euro, bahn, milliarden, schiene, investitionen","kundencharta, schlichtungsstelle, bahn, verbraucherschutz",13.8,["Kundencharta Deutsche Bahn","Verbraucherschutz im Bahnverkehr","Schlichtungsstelle Bahn"]],
+  [2005,"Schiff","maritimen, häfen, maritime, wirtschaft","port, package, maritimen, maritime, nordseeregion, häfen, seeschifffahrt",25.1,["Maritime Konferenz (Nationale Strategie)","Seeschifffahrts-Subventionen","Nordseeregion-Entwicklung"]],
+  [2005,"Straße","euro, milliarden, projekte, infrastruktur","verkehrswegeplanungsbeschleunigungsgesetz, euro, omnibusgewerbe, maut, osterweiterung, bundesverwaltungsgericht",15.1,["Verkehrswegeplanungsbeschleunigungsgesetz","Maut-Ausweitungsdiskussion","Osterweiterung & LKW-Verkehr"]],
+
+  [2006,"Luft","flugsicherung, dfs, europäischen, kapitalprivatisierung","flugsicherung, dfs, kapitalprivatisierung, sky, single, luftraum, european",10.8,["Teilprivatisierung DFS Flugsicherung","Single European Sky","Bundesaufsicht Luftfahrt"]],
+  [2006,"Schiene","euro, milliarden, bahn, schiene, investitionen","tiefensee, kapitalprivatisierung, netz, börsengang, regionalisierungsmittel, mehdorn",25.3,["Bahn-Börsengang (Kapitalprivatisierung)","Regionalisierungsmittel","Netz-Trennung vs. Integrierter Konzern"]],
+  [2006,"Schiff","euro, haushalt, investitionen, wirtschaft, arbeitsplätze","kapitalprivatisierung, schleuse, euro, haushalt",3.8,[]],
+  [2006,"Straße","euro, milliarden, investitionen, straße","biogenen, fünfjahresplan, brücken, gigaliner",22.5,["Gigaliner-Debatte (Übermaß-LKW)","Fünfjahresplan Straße","Brücken-Sanierungsbedarf"]],
+
+  [2007,"Luft","kollege, euro, prozent","euro, prozent",2.4,[]],
+  [2007,"Schiene","bahn, euro, milliarden, schiene, netz, strecke","eigentum, bahn, netz, transrapid, tiefensee, konzern, teilprivatisierung",23.3,["Bahn-Teilprivatisierung (Volkseigentum-Debatte)","Netz vs. Konzern-Modell","Transrapid München (letzter Versuch)"]],
+  [2007,"Schiff","maritime, maritimen, häfen, ostsee","meerespolitik, grünbuch, maritime, schiffbau, maritimen, fischerei, meer",14.5,["EU-Grünbuch Maritime Politik","Meerespolitik & Fischerei","Schiffbau-Förderung"]],
+  [2007,"Straße","tempolimit, autobahnen, co2","tempolimit, tempolimits, autobahnen, gefahrguttransporte, verkehrssicherheit, co2, klimaschutz",28.6,["Generelles Tempolimit (Debatte)","CO₂-Emissionen Straßenverkehr","Gefahrguttransporte","Verkehrssicherheitsprogramm"]],
+
+  [2008,"Luft","flugsicherung, emissionen, fliegen","anflugübungen, flugsicherung, luftraumblöcke, fliegen, emissionen",6.2,["Luftraumblöcke (Single European Sky Umsetzung)","Emissionshandel Luftverkehr"]],
+  [2008,"Schiene","bahn, schiene, euro, wettbewerb","24,9, sozialtickets, bahn, finanzierungsvereinbarung, beteiligungsvertrag, tiefensee, börsengang, fernverkehr, teilprivatisierung",36.2,["Bahn-Börsengang (Abbruch durch Finanzkrise)","Beteiligungsvertrag Bund/Bahn","Wettbewerb Fernverkehr"]],
+  [2008,"Schiff","meere, donau, variante, tourismus, ausbau","meere, donau, variante, tourismus, wasserstraßen",6.0,["Donau-Ausbau (Varianten-Entscheidung)","Wassertourismus"]],
+  [2008,"Straße","euro, verkehr, milliarden, straße, schiene","straßenbaubericht, parkplätze, rastanlagen, fehmarnbelt, querung",23.4,["Straßenbaubericht","Rastanlagen & Parkplätze (LKW)","Fehmarnbelt-Querung (Straße)"]],
+
+  [2009,"Luft","flugsicherung, europäischen, flugsicherungsorganisationen, dfs, gesetz","flugsicherung, flugsicherungsorganisationen, dfs, ses, luftfahrtindustrie",12.8,["Flugsicherungsorganisations-Reform (EU-Recht)","DFS & Bundesaufsicht","Luftfahrtindustrie-Förderung"]],
+  [2009,"Schiene","bahn, euro, stuttgart, schiene, verspätung, fahrgäste","verspätung, entschädigung, verspätungen, fahrgastrechte, bahnkunden, bahnkunde, stuttgart",22.8,["Fahrgastrechte-Gesetz (Entschädigung bei Verspätung)","Stuttgart 21 (erste Kontroversen)","Bahnkundenrechte"]],
+  [2009,"Schiff","häfen, querung, maritimen, schiffe","querung, fehmarnbelt, maritimen, häfen, hafenkonzept, werften",15.6,["Fehmarnbelt-Querung (Planung)","Hafenkonzept","Werftenkrise (Finanzkrise)"]],
+  [2009,"Straße","euro, reifen, elektromobilität","winterreifen, reifen, bereifung, elektromobilität, sommerreifen",23.1,["Elektromobilität (erste politische Agenda)","Winterreifen-Pflicht","Führerschein-Neuregelungen"]],
+
+  [2010,"Luft","flugsicherung, luftraum, passagiere, vulkanasche, flüge, piloten","vulkanasche, sichtflug, eyjafjallajökull, sichtflüge, krisenmanagement, vulkanausbruch, piloten, asche",9.5,["Vulkanasche Eyjafjallajökull (Krisenmanagement)","Sichtflüge & Luftraumsperrung","Passagierschutz bei Flugausfall"]],
+  [2010,"Schiene","euro, bahn, schiene, stuttgart, milliarden","stuttgart, euro, geißler, schlichterspruch, arriva, ramsauer, schlichtung, neubaustrecke",21.0,["Stuttgart 21 (Schlichtung Heiner Geißler)","Schlichterspruch & Neubaustrecke","Arriva-Übernahme durch DB"]],
+  [2010,"Schiff","schifffahrtsverwaltung, euro, aufgaben","schifffahrtsverwaltung, zukunftsfähigkeit",5.3,["Reform Wasserstraßenverwaltung (WSV)"]],
+  [2010,"Straße","euro, straße, mobilität, carsharing, elektromobilität","carsharing, elektromobilität, begleiteten, mofa, mopedführerschein",30.6,["Carsharing-Förderung","Elektromobilität (Regierungsprogramm)","Begleitetes Fahren ab 17"]],
+
+  [2011,"Luft","fluggesellschaften, kabinenluft, schlichtungsstelle, passagiere","kabinenluft, schlichtungsstelle, fluggesellschaften, fume, söp, flughafenentgelten, events",7.3,["Kabinenluft-Qualität (Fume Events)","Schlichtungsstelle Luftfahrt","Flughafenentgelte-Regulierung"]],
+  [2011,"Schiene","bahn, stuttgart, euro, schiene, grünen","stresstest, schlichtung, stuttgart, rheintalbahn, schlichterspruch, geißler, schienenbonus",26.8,["Stuttgart 21 (Stresstest & Volksabstimmung)","Rheintalbahn-Ausbau","Schienenbonus (Lärmschutz)"]],
+  [2011,"Schiff","elbe, maritimen, maritime, wirtschaft, konferenz","elbe, maritime, maritimen, wilhelmshaven, konferenz, wsv, schifffahrt, schifffahrtsverwaltung",18.3,["Elbe-Vertiefung","Wilhelmshaven Tiefwasserhafen (JadeWeserPort)","WSV-Reform"]],
+  [2011,"Straße","euro, maut, lkw, bundesstraßen, straße","maut, bundesstraßen, ramsauer, euro, lkw, fernbusverkehr",19.0,["LKW-Maut auf Bundesstraßen","Fernbusverkehr-Liberalisierung (Diskussion)","EU-Weißbuch Verkehr"]],
+
+  [2012,"Luft","euro, schlichtungsstelle, flughafen, flugrouten, berlin, schlichtung","schlichtungsstelle, flugrouten, schlichtung, söp, kabinenluft, fahrgastrechte",5.2,["Schlichtungsstelle Luftfahrt (Ausbau)","Flugrouten-Proteste (BER)","Kabinenluft (Fume Events Fortsetzung)"]],
+  [2012,"Schiene","bahn, schiene, euro, schienenbonus, öpnv, milliarden","schienenbonus, fernbuslinien, aufgabenträger, öpnv, ramsauer",20.3,["Schienenbonus-Abschaffung (Lärmschutz)","Fernbus-Liberalisierung (Gegenposition Bahn)","ÖPNV-Aufgabenträger"]],
+  [2012,"Schiff","reeder, schiffe, see, maritimen","reeder, flaminia, seearbeitsübereinkommen, msc, ilo, seehandelsrecht, flagge, seeleute, bewachungsunternehmen",28.1,["Seearbeitsübereinkommen ILO (Ratifizierung)","Seeleute-Arbeitsrecht","Bewachungsunternehmen (Piratenabwehr)","MSC Flaminia-Havarie"]],
+  [2012,"Straße","euro, tempo, verkehrssicherheit","tempo, trikes, verkehrssicherheit, fernbuslinien, verkehrssicherheitsprogramm, ramsauer, verkehrstoten",23.8,["Tempo-30-Zonen & Verkehrssicherheit","Fernbus-Liberalisierung","Verkehrssicherheitsprogramm 2011–2020"]],
+
+  [2013,"Luft","flugsicherung, brandenburg, berlin, flughafen, flughäfen, flugrouten, luftverkehr","flugrouten, flughafengesellschaft, flugsicherung, bundesaufsichtsamt, brandenburg, zürich, ber, staatsvertrag",5.7,["BER-Desaster (Flugrouten, Zeitplan)","Staatsvertrag mit Schweiz (Zürich-Fluglärm)","Luftverkehrswirtschaft-Regulierung"]],
+  [2013,"Schiene","bahn, schiene, euro, ausbau, projekt, stuttgart","rheintalbahn, schienenbonus, bundesnetzagentur, schienengüterfernverkehr, regulierung",18.8,["Rheintalbahn-Ausbau (Genehmigungsverfahren)","Schienengüterverkehr-Netzausbau","Regulierung Bundesnetzagentur"]],
+  [2013,"Schiff","ostsee, kanal, nord, maritimen, maritime, schiffe","maritime, maritimen, kanal, brunsbüttel, ostsee, reeder, nord",15.7,["Nord-Ostsee-Kanal (Schleusen Brunsbüttel)","Reeder-Förderung & Flagge","Maritime Strategie"]],
+  [2013,"Straße","euro, maut, pkw, verkehrssicherheit, infrastruktur","ivs, tempolimit, maut, ramsauer, pkw, verkehrssicherheit, punkteabbau",27.5,["PKW-Maut-Diskussion (Ausländer-Maut)","Verkehrssicherheit & Punktesystem (Reform Flensburg)","Intelligente Verkehrssysteme (IVS)"]],
+
+  [2014,"Luft","flughafen, lärmschutz, ber, berlin, flugrouten","nachtruhezeit, flugrouten, ber, nachtflugverbot, flughafens, lärmschutz, flughäfen",4.6,["BER-Eröffnungsverzögerungen","Nachtflugverbot & Lärmschutz","Flugrouten-Konflikte"]],
+  [2014,"Schiene","bahn, schiene, euro, infrastruktur, bahnreform","lufv, bahnreform, nachtzüge, autoreisezüge, nachtzug, dobrindt",19.6,["Bahnreform-Bilanz (20 Jahre)","Nachtzüge-Abbestellung (DB)","LUFV (Leistungs- und Finanzierungsvereinbarung)"]],
+  [2014,"Schiff","euro, reform, wasserstraßen, schifffahrtsverwaltung, wsv","wsv, schifffahrtsverwaltung, reform, generaldirektion, ppp, wasserstraßen",7.0,["WSV-Reform (Generaldirektion Wasserstraßen)","Wasserstraßen-Investitionsprogramm","PPP-Modelle Wasserstraßen"]],
+  [2014,"Straße","maut, euro, lkw, milliarden, pkw, infrastruktur","maut, dobrindt, pkw, euro, infrastrukturabgabe, lkw, öpp, ausländermaut",33.7,["PKW-Maut (Infrastrukturabgabe, Dobrindt)","LKW-Maut-Ausweitung","ÖPP-Modelle Autobahn"]],
+
+  [2015,"Luft","flughäfen, flugrouten, flughafen","luftverkehrsabkommen, flugrouten, flugverfahren, luftverkehrswirtschaft, fluglärm, airlines",6.6,["Luftverkehrsabkommen (Open Skies)","Flugrouten-Konflikte (Fluglärm)"]],
+  [2015,"Schiene","bahn, länder, bund, euro, schiene, züge, eisenbahn","regionalisierungsmittel, finanzbeziehungen, eba, fernverkehrskonzept, züge, nachtzug, nahverkehr",16.8,["Regionalisierungsmittel (Neuverhandlung Bund/Länder)","Fernverkehrskonzept DB","Nachtzüge (Rückzug DB)"]],
+  [2015,"Schiff","maritime, maritimen, euro, ausbildung, reeder, schiffe","maritime, maritimen, reeder, ausbildung, lohnsteuereinbehalt, schifffahrtsnation, flagge, lng",9.6,["Maritime Konferenz","Reeder-Förderung (Lohnsteuereinbehalt)","LNG-Antriebe für Schiffe","Ausbildung Seeleute"]],
+  [2015,"Straße","maut, euro, straßen, milliarden, pkw, lkw","infrastrukturabgabe, maut, dobrindt, pkw, elektromobilität, systemwechsel, achsklassen, nutzerfinanzierung",33.0,["PKW-Maut (Infrastrukturabgabe Dobrindt)","Elektromobilität","Nutzerfinanzierung Straßen (Systemwechsel)"]],
+
+  [2016,"Luft","sicherheit, luftverkehr, flughäfen, luftfahrt, luftverkehrswirtschaft","germanwings, luftverkehrswirtschaft, luftrettung, flugmedizinischen, flugrouten, piloten, fluglärm, zuverlässigkeitsprüfung",8.1,["Germanwings-Absturz (Aufarbeitung, Piloten-Gesundheit)","Zuverlässigkeitsprüfung Piloten","Fluglärm & Flugrouten"]],
+  [2016,"Schiene","bahn, schiene, euro, milliarden, bundesverkehrswegeplan, stuttgart, länder","takt, rheintalbahn, trassenpreisbremse, bundesverkehrswegeplan, stuttgart, trassenpreise, regionalisierungsmittel",24.4,["Bundesverkehrswegeplan 2030 (Schiene)","Trassenpreisbremse & Regionalisierung","Stuttgart 21 (Fortschritt)","Taktverkehr-Konzepte"]],
+  [2016,"Schiff","reeder, wasserstraßen, euro, bundesverkehrswegeplan, wsv, reform","reeder, wsv, flagge, schifffahrtsverwaltung, tonnagesteuer, seeleute, maritime, reedereien, digitale",6.6,["WSV-Reform (Schifffahrtsverwaltung)","Reeder & Tonnagesteuer","Digitalisierung maritime Wirtschaft"]],
+  [2016,"Straße","euro, infrastruktur, bundesverkehrswegeplan, mobilität, milliarden, maut","digitalisierung, dobrindt, digitale, maut, elektromobilität, bundesverkehrswegeplan, automatisierte",23.0,["Digitalisierung & automatisiertes Fahren","Bundesverkehrswegeplan Straße","Elektromobilität","Maut-Umsetzung"]],
+
+  [2017,"Luft",null,null,null,[]],
+  [2017,"Schiene","bahn, euro, schiene, güterwagen, millionen","güterwagen, nachtzüge, öbb, nachtzug, umrüstung, leise, schienenlärmschutzgesetz, laute",17.3,["Lärmschutz Schienengüterverkehr (leise Güterwagen)","Schienenlärmschutzgesetz","Nachtzüge (ÖBB-Übernahme)","Umrüstungsförderung Güterwaggons"]],
+  [2017,"Schiff","maritimen, maritime, wirtschaft, elbe, schiffe","maritime, maritimen, traditionsschifffahrt, elbe, beckmeyer, verschrotten, werften",11.2,["Traditionsschifffahrt-Förderung","Elbe-Vertiefung (Abschluss)","Maritime Wirtschaft & Werften"]],
+  [2017,"Straße","euro, maut, mobilität, auto, carsharing","carsharing, automatisierten, radverkehr, autorennen, infrastrukturabgabe, maut, dobrindt, carsharinggesetz",42.9,["Carsharing-Gesetz","Automatisiertes Fahren (Gesetz)","PKW-Maut (Umsetzung)","Radverkehr als eigene Kategorie"]],
+
+  [2018,"Luft","airlines, flughäfen, infrastruktur, air","air, airlines, flughäfen, infrastruktur, luftverkehr",3.2,["Air Berlin-Insolvenz & Nachfolge","Flughafeninfrastruktur","Airline-Konsolidierung"]],
+  [2018,"Schiene","bahn, euro, schiene, öpnv","rastatt, zentimetern, ausweichstrecken, tunnelhavarie, bahnsteighöhe, etcs, digitalisierung, öpnv",20.0,["Rastatt-Tunnel-Havarie (Streckensperrung)","ETCS-Digitalisierung Schiene","ÖPNV-Investitionen"]],
+  [2018,"Schiff","binnenschiffen, binnenschifffahrt, schiffe, häfen, emissionen","binnenschiffen, antriebe, binnenschifffahrt, schiffe, elbe, häfen, rhein, emissionen",4.4,["Binnenschifffahrt & Niedrigwasser","Emissionen Schiffe","Häfen & Hinterlandanbindung"]],
+  [2018,"Straße","mobilität, fahrverbote, fahrzeuge, lkw","fahrverbote, hardwarenachrüstung, dieselfahrer, nachrüstung, hardwarenachrüstungen, diesel, scheuer, sofortprogramm",46.7,["Diesel-Fahrverbote (Schadstoffdebatte)","Hardware-Nachrüstung Diesel-Pkw","Sofortprogramm saubere Luft"]],
+
+  [2019,"Luft","luftverkehrsteuer, luftverkehr, bahn, flughäfen","luftverkehrsteuer, moselbrücke, flüge, fliegen, innerdeutschen, flughäfen, flugverkehr, bahn",4.5,["Luftverkehrsteuer-Erhöhung (Klimapolitik)","Inlandsflüge vs. Bahn"]],
+  [2019,"Schiene","bahn, schiene, euro, milliarden, geld, straße","mittelrheintal, bahn, ausweichstrecken, digitalisierung, takt, lufv",26.0,["Mittelrheintal-Schienenlärm","Ausweichstrecken Rheintal","Deutschlandtakt (Planung)","LUFV III Bahnfinanzierung"]],
+  [2019,"Schiff","maritime, maritimen, schiffe","maritime, landstrom, msc, maritimen, lng, containern, green",7.0,["Landstrom für Seeschiffe","LNG-Antriebe","Container-Schifffahrt & Häfen"]],
+  [2019,"Straße","mobilität, fahrzeuge, bahn, zukunft, maut","elektrokleinstfahrzeuge, fahrverbote, elektromobilität, elektroroller, kraftstoffe, ladeinfrastruktur, maut",35.5,["E-Scooter-Zulassung (Elektrokleinstfahrzeuge)","Fahrverbote Diesel (Umsetzung)","Ladeinfrastruktur Elektromobilität","Maut-Reform"]],
+
+  [2020,"Luft","flughäfen, luftverkehr, privatpiloten, luftverkehrswirtschaft","privatpiloten, zuverlässigkeitsüberprüfung, luftverkehrswirtschaft, flughäfen, corona, luftsicherheit, luftverkehrsbranche, airlines",6.5,["Corona-Krise Luftverkehr (Staatshilfen)","Privatpiloten-Sicherheitsüberprüfungen","Flughäfen in der Krise"]],
+  [2020,"Schiene","euro, bahn, schiene, milliarden, geld, ausbau, mobilität","gelnhausen, hanau, digitalisierung, scheuer, bürgerbeteiligung, barrierefreiheit, elektrifizierung, verkehrswende",22.1,["Verkehrswende & Schieneninvestitionen","Barrierefreiheit Bahnhöfe","Elektrifizierung Strecken","Digitalisierung ETCS"]],
+  [2020,"Schiff","werften, schiffe, euro, schiffbau, maritime, arbeitsplätze","werften, genting, schiffbau, schiffbauindustrie, maritime, schiffe, beschaffung",5.5,["Genting-Werft-Insolvenz","Schiffbauindustrie in der Corona-Krise","Beschaffungsprogramm Marine"]],
+  [2020,"Straße","euro, mobilität, land, milliarden, lkw","abbiegeassistenten, radverkehr, straßenverkehrs, autobahnbaustellen, verkehrswende, bußgelder, radfahrer",39.8,["Abbiegeassistenten (LKW-Pflicht)","Radverkehr-Infrastruktur","Verkehrswende & ÖPNV","Bußgeld-Reform"]],
+
+  [2021,"Luft","flughäfen, prozent, flugsicherung, euro, luftverkehr, drohnen, arbeitsplätze","unbemannten, drohnen, corona, flughäfen, luftverkehrswirtschaft, flugsicherung",4.3,["Drohnen-Regulierung (unbemannte Luftfahrt)","Corona & Flughäfen-Überlebenssicherung","Flugsicherung-Neuaufstellung"]],
+  [2021,"Schiene","schiene, bahn, öpnv, euro, mobilität, infrastruktur","deutschlandtakt, öpnv, gastel, gäubahn, elektrifizierung, bahnstrecken",24.0,["Deutschlandtakt (Umsetzungsplanung)","ÖPNV-Finanzierung (Bund/Länder)","Elektrifizierungsprogramm","Gäubahn-Stuttgart-Konflikt"]],
+  [2021,"Schiff","maritimen, wasserstraßen, maritime, wirtschaft","maritimen, maritime, seeleute, lotsen, werften, schifffahrtsverwaltung, china",7.3,["Seeleute-Ausbildung & Nachwuchs","Lotsenwesen-Reform","China-Konkurrenz Werften","Wasserstraßenverwaltung"]],
+  [2021,"Straße","mobilität, öpnv, kommunen, ländlichen, auto","uber, pooling, öpnv, mietwagen, taxigewerbe, rückkehrpflicht, taxi",36.8,["Uber & Mietwagen-Gesetz (Personenbeförderungsgesetz-Reform)","ÖPNV-on-Demand-Pooling","Taxi vs. Ridehailing","Pandemie & ÖPNV-Finanzierung"]],
+
+  [2022,"Luft","flughäfen, probleme, problem, einfach","luftsicherheitskontrollen, maske, flughäfen, pandemie, maskenpflicht, sicherheitskontrollen, airlines, passagiere",5.4,["Sicherheitskontrollen Flughäfen (Chaos Sommer 2022)","Masken-/Pandemiepflichten Luftfahrt","Passagier-Beschwerden & Entschädigungen"]],
+  [2022,"Schiene","euro, ticket, öpnv, schiene, bahn, land, infrastruktur, milliarden","ticket, öpnv, euro, ampel, digitalisierung, wissing, ampelkoalition, bus, mobilitätswende",28.0,["9-Euro-Ticket (Einführung & Wirkung)","ÖPNV-Finanzierung Ampelkoalition","Digitalisierung Schiene (Wissing)","Mobilitätswende"]],
+  [2022,"Schiff","wasserstraßen, euro, ausbau, infrastruktur, schiffe","neckarschleusen, wasserstraßen, kanal, schiffe, schleusen, werften, seehäfen, ostsee",7.3,["Schleusen-Sanierung (Neckar, Kanäle)","Wasserstraßen-Investitionen","Seehäfen & Ostsee-Sicherheit"]],
+  [2022,"Straße","euro, öpnv, ticket, mobilität, land, infrastruktur","ticket, öpnv, ampel, wissing, euro, fuels, ampelkoalition, lüdenscheid, tankrabatt",39.3,["9-Euro-Ticket (Wechselwirkung Straße/ÖPNV)","Tankrabatt (Energiepreiskrise)","E-Fuels-Debatte","Lüdenscheid-Brückendesaster"]],
+
+  [2023,"Luft",null,null,null,[]],
+  [2023,"Schiene","bahn, schiene, euro, ticket, öpnv, infrastruktur, geld","ticket, deutschlandticket, beschleunigungskommission, wissing, ampel, öpnv, deutschlandtakt",26.9,["Deutschlandticket (49-Euro-Ticket)","Beschleunigungskommission Schiene","Deutschlandtakt-Umsetzung","Ampel-Schienenfinanzierung (Wissing)"]],
+  [2023,"Schiff","häfen, maritime, maritimen, infrastruktur","häfen, maritime, hafenstrategie, imo, maritimen, schifffahrt, ampelkoalition, souveränität",14.2,["Nationale Hafenstrategie","IMO-Klimaschutzziele Schifffahrt","Maritime Souveränität"]],
+  [2023,"Straße","euro, land, schiene, lkw, öpnv, mobilität, ticket","ticket, deutschlandticket, ampel, fuels, wissing, ampelkoalition, öpnv, straßenverkehrsgesetz, maut",36.4,["Deutschlandticket (Gegenfinanzierung Straße)","E-Fuels-Ausnahme (Verbrenner-Debatte EU)","LKW-Maut-Reform","Straßenverkehrsgesetz-Novelle (Radverkehr)"]],
+
+  [2024,"Luft","luftverkehrsteuer, luftverkehr, deutschen, branche, standortkosten, flughäfen, csu","standortkosten, luftverkehrsteuer, ampel, airlines, kerosin, ryanair, luftverkehrsstandort, mallorca",11.0,["Luftverkehrsteuer-Erhöhung (Standortkritik)","Kerosin-Besteuerung","Ryanair-Rückzug aus deutschen Flughäfen","Wettbewerbsnachteil Luftverkehrsstandort"]],
+  [2024,"Schiene","bahn, schiene, euro, milliarden, infrastruktur, geld, land","infrago, deutschlandticket, bswag, ampel, korridorsanierung, bahn, wissing, riedbahn, digitalisierung",33.8,["InfraGo-Gründung (Bahn-Strukturreform)","Korridorsanierung (Riedbahn)","Bahn-Finanzierungsgesetz (BSWAG)","Deutschlandticket-Fortführung"]],
+  [2024,"Schiff","werft, frage","werft, frage",2.2,[]],
+  [2024,"Straße","euro, führerschein, land, straße, auto, mobilität, milliarden","führerschein, deutschlandticket, ampel, fahrschüler, verbrenner, wissing, fahrschülerinnen, fahrschulen, durchfallquoten",29.8,["Führerschein-Durchfallquoten & Fahrschulen","Verbrenner-Debatte (EU-2035)","Deutschlandticket vs. Auto","Straßeninfrastruktur-Finanzierung"]],
+];
+
+// Highlight words that are particularly distinctive (appear in top_words / TF-IDF column)
+// We mark TF-IDF words as "highlighted" since they're more distinctive than freq words
+function buildSourceHTML(freqWords, tfidfWords, traeger) {
+  if (!freqWords && !tfidfWords) return null;
+
+  const tfidfSet = tfidfWords ? new Set(tfidfWords.split(',').map(w => w.trim().toLowerCase())) : new Set();
+
+  const renderWords = (wordStr, isTfidf) => {
+    if (!wordStr) return '—';
+    return wordStr.split(',').map(w => {
+      const wt = w.trim();
+      if (isTfidf) {
+        return `<span class="hw ${traeger}">${wt}</span>`;
+      }
+      // For freq words, highlight if also in tfidf
+      if (tfidfSet.has(wt.toLowerCase())) {
+        return `<span class="hw ${traeger}">${wt}</span>`;
+      }
+      return wt;
+    }).join(', ');
+  };
+
+  return `
+    <div class="source-row">
+      <span class="source-label">Häufig</span>
+      <span class="source-words">${renderWords(freqWords, false)}</span>
+    </div>
+    <hr class="source-divider">
+    <div class="source-row">
+      <span class="source-label">TF-IDF</span>
+      <span class="source-words">${renderWords(tfidfWords, true)}</span>
+    </div>
+  `;
+}
+
+// Group by year
+const byYear = {};
+raw.forEach(d => {
+  const [year, traeger, freqWords, tfidfWords, wordShare, topics] = d;
+  if (!byYear[year]) byYear[year] = [];
+  byYear[year].push({ traeger, freqWords, tfidfWords, wordShare, topics });
+});
+
+const years = Object.keys(byYear).sort((a,b) => b - a);
+const timeline = document.getElementById('timeline');
+
+const colorMap = { Luft: '#6ba3c4', Schiene: '#c97e4a', Schiff: '#5ea88a', 'Straße': '#c4a84a' };
+
+years.forEach(year => {
+  const block = document.createElement('div');
+  block.className = 'year-block';
+
+  const label = document.createElement('div');
+  label.className = 'year-label';
+  label.textContent = year;
+
+  const entries = document.createElement('div');
+  entries.className = 'year-entries';
+
+  byYear[year].forEach(item => {
+    // Skip entries with no data at all
+    const hasTopics = item.topics && item.topics.length > 0;
+    const hasWords = item.freqWords || item.tfidfWords;
+    if (!hasTopics && !hasWords) return;
+
+    const entry = document.createElement('div');
+    entry.className = 'entry';
+    entry.dataset.traeger = item.traeger;
+
+    const entryMain = document.createElement('div');
+    entryMain.className = 'entry-main';
+
+    const tag = document.createElement('div');
+    tag.className = `traeger-tag ${item.traeger}`;
+    tag.textContent = item.traeger.toUpperCase();
+
+    const right = document.createElement('div');
+    right.className = 'entry-right';
+
+    // Topics
+    if (hasTopics) {
+      const topicsDiv = document.createElement('div');
+      topicsDiv.className = 'topics';
+      item.topics.forEach((t, i) => {
+        const pill = document.createElement('span');
+        pill.className = `topic-pill${i === 0 ? ' primary ' + item.traeger : ''}`;
+        pill.textContent = t;
+        topicsDiv.appendChild(pill);
+      });
+      right.appendChild(topicsDiv);
+    } else {
+      const none = document.createElement('span');
+      none.className = 'no-topic';
+      none.textContent = 'Thema nicht eindeutig bestimmbar';
+      right.appendChild(none);
+    }
+
+    // Source toggle
+    if (hasWords) {
+      const sourceHTML = buildSourceHTML(item.freqWords, item.tfidfWords, item.traeger);
+      if (sourceHTML) {
+        const toggleBtn = document.createElement('button');
+        toggleBtn.className = 'source-toggle';
+        toggleBtn.innerHTML = `
+          <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+            <path d="M2 1L6 4L2 7" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          Quellwörter`;
+        if (item.wordShare) {
+          toggleBtn.innerHTML += `&nbsp;<span style="color:#333;font-weight:300">${item.wordShare}% Wortanteil</span>`;
+        }
+
+        const sourcePanel = document.createElement('div');
+        sourcePanel.className = 'source-panel';
+        sourcePanel.innerHTML = sourceHTML;
+
+        // Add word-share bar
+        if (item.wordShare) {
+          const barHTML = `
+            <hr class="source-divider">
+            <div class="word-share-bar">
+              <span class="ws-label">Wortanteil</span>
+              <div class="ws-track">
+                <div class="ws-fill" style="width:${Math.min(item.wordShare/50*100,100)}%; background:${colorMap[item.traeger]}60"></div>
+              </div>
+              <span class="ws-value">${item.wordShare}%</span>
+            </div>`;
+          sourcePanel.innerHTML += barHTML;
+        }
+
+        toggleBtn.addEventListener('click', () => {
+          const open = sourcePanel.classList.toggle('open');
+          toggleBtn.classList.toggle('open', open);
+        });
+
+        right.appendChild(toggleBtn);
+        right.appendChild(sourcePanel);
+      }
+    }
+
+    entryMain.appendChild(tag);
+    entryMain.appendChild(right);
+    entry.appendChild(entryMain);
+    entries.appendChild(entry);
+  });
+
+  block.appendChild(label);
+  block.appendChild(entries);
+  timeline.appendChild(block);
+});
+
+// Filter logic
+const activeFilters = new Set(['Luft', 'Schiene', 'Schiff', 'Straße']);
+document.getElementById('legend').addEventListener('click', e => {
+  const item = e.target.closest('.legend-item');
+  if (!item) return;
+  const f = item.dataset.filter;
+  if (activeFilters.has(f)) {
+    if (activeFilters.size === 1) return;
+    activeFilters.delete(f);
+    item.classList.remove('active');
+  } else {
+    activeFilters.add(f);
+    item.classList.add('active');
+  }
+  document.querySelectorAll('.entry').forEach(el => {
+    el.classList.toggle('hidden', !activeFilters.has(el.dataset.traeger));
+  });
+});
+</script>
+</body>
+</html>

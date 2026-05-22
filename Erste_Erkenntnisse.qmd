@@ -20,7 +20,7 @@ library(tidytext)
 
 ```{r, echo = FALSE}
 bt_corp <- read_rds(
-  "/home/jan/Dokumente/Datensätze/Projekt IHK/coded_df_full.rds"
+  "/Users/jan/Documents/Datensätze/Projekt IHK/coded_df_full.rds"
 )
 
 bt_corp_filtered <- bt_corp %>%
@@ -42,7 +42,7 @@ Die folgende Übersicht der Codes illustriert die erfassten Themenbereiche; die 
 
 ```{r, echo = FALSE}
 cap <- readxl::read_xlsx(
-  "/home/jan/Dokumente/Datensätze/Projekt IHK/CAP_Codebuch.xlsx"
+  "/Users/jan/Documents/Datensätze/Projekt IHK/CAP_Codebuch.xlsx"
 ) %>%
   rename(Originalname = 1) %>%
   mutate(Kategorie = gsub("(\\w+)\\s+(.*)", "\\1", Originalname)) %>%
@@ -77,11 +77,11 @@ cap |>
 
 Dabei zeigt sich:
 
--   Der Code **"Transportation"** deckt alle wesentlichen Aspekte der Verkehrspolitik vollumfänglich ab.
+- Der Code **"Transportation"** deckt alle wesentlichen Aspekte der Verkehrspolitik vollumfänglich ab.
 
--   Die [Modellevaluation](https://huggingface.co/chkla/parlbert-topic-german) bescheinigt dieser Kategorie einen [**F1-Score**]{.abbr title="Der F1-Score kombiniert Präzision (wie viele der als 'Transportation' klassifizierten Texte sind es wirklich?) und Vollständigkeit (wie viele der echten Transportation-Texte wurden gefunden?) zu einer einzigen Kennzahl. Ein Wert von 1 wäre perfekt, 0 völlig unbrauchbar."} **von 0,86**, was eine sehr zuverlässige Identifikation ermöglicht.
+- Die [Modellevaluation](https://huggingface.co/chkla/parlbert-topic-german) bescheinigt dieser Kategorie einen [**F1-Score**]{.abbr title="Der F1-Score kombiniert Präzision (wie viele der als 'Transportation' klassifizierten Texte sind es wirklich?) und Vollständigkeit (wie viele der echten Transportation-Texte wurden gefunden?) zu einer einzigen Kennzahl. Ein Wert von 1 wäre perfekt, 0 völlig unbrauchbar."} **von 0,86**, was eine sehr zuverlässige Identifikation ermöglicht.
 
--   Das Modell ist somit hervorragend geeignet, um verkehrspolitische Reden **robust zu erfassen**.
+- Das Modell ist somit hervorragend geeignet, um verkehrspolitische Reden **robust zu erfassen**.
 
 ### Anwendung und Aggregation
 
@@ -145,7 +145,7 @@ lp_topicrank <- bt_corp_filtered |>
   arrange(lp, rank)
 
 cap <- readxl::read_xlsx(
-  "/home/jan/Dokumente/Datensätze/Projekt IHK/CAP_Codebuch.xlsx"
+  "/Users/jan/Documents/Datensätze/Projekt IHK/CAP_Codebuch.xlsx"
 ) %>%
   rename(Originalname = 1) %>%
   mutate(Kategorie = gsub("(\\w+)\\s+(.*)", "\\1", Originalname)) %>%
@@ -502,7 +502,7 @@ Die Grafik untersucht explorativ den Zusammenhang zwischen der ADAC-Staustatisti
 
 ```{r, echo = FALSE, message = FALSE, warning = FALSE}
 stau <- read_csv(
-  "/home/jan/Dokumente/Datensätze/Projekt IHK/Drittvariablen/staustatistik.csv"
+  "/Users/jan/Documents/Datensätze/Projekt IHK/Drittvariablen/staustatistik.csv"
 )
 
 transport_yearly4 <- left_join(
@@ -590,7 +590,7 @@ Die Analyse der Haushaltsdaten verdeutlicht, dass der Anteil des Einzelplans 12 
 
 ```{r, echo = FALSE, warning = FALSE, message = FALSE}
 anteil_epl12 <- read_csv2(
-  "/home/jan/Dokumente/Datensätze/Projekt IHK/Drittvariablen/anteil_ep12.csv"
+  "/Users/jan/Documents/Datensätze/Projekt IHK/Drittvariablen/anteil_ep12.csv"
 )
 
 transport_yearly3 <- left_join(

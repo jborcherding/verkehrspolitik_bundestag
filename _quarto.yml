@@ -1,6 +1,16 @@
 project:
   output-dir: docs
 
+website:
+  navbar:
+    left:
+      - href: index.qmd
+        text: Start
+      - href: Erste_Erkenntnisse.qmd
+        text: Erste Erkenntnisse
+      - href: debatten_themen.qmd
+        text: Debatten-Themen     # ← neu
+
 format:
   html:
     theme:
