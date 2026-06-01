@@ -305,7 +305,7 @@ verkehrsart_yearrank <- aggregate_shares(
   "year",
   verkehrsart_vars,
   "verkehrsart"
-)
+) |> filter(year < 2025)
 verkehrsart_lprank <- aggregate_shares(
   transportation_speeches,
   "lp",
@@ -1145,7 +1145,7 @@ make_senti_overall_fig(
 senti_year <- senti_long(
   transportation_speeches |> mutate(year = year(as.Date(date))),
   group_vars = "year"
-)
+) |> filter(year < 2025)
 
 lp_year_shapes <- map(seq_len(nrow(lp_starts)), \(i) {
   list(
@@ -1489,7 +1489,7 @@ make_senti_gov_overall(
 senti_gov_year <- senti_long(
   ts_gov |> mutate(year = year(as.Date(date))),
   group_vars = c("year", "gov_label")
-)
+) |> filter(year < 2025)
 
 make_senti_gov_year_fig <- function(cats, farben, title) {
   fig <- plot_ly()
