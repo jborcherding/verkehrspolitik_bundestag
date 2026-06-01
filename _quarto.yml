@@ -10,6 +10,8 @@ website:
         text: Erste Erkenntnisse
       - href: verkehrsdebatte_themen.html
         text: Debatten-Themen
+      - href: verkehrsträger_verkehrsart.qmd
+        text: Erste Erkenntnisse nach Verkehrsträger und Verkehrsart
 
 format:
   html:
