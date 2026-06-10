@@ -68,7 +68,6 @@ transportation_speeches <- traffic::transportation_speeches_final %>%
   - **Institutionelle Agenda** — Thema erreicht die Plenardebatte *(unsere Defaultebene)*
   - **Entscheidungsagenda** — konkreter Vorschlag / Abstimmung
   - **Formalentscheidung** — Output des Prozesses
-- Übergänge = kritische Wegmarken (*critical junctures*), die Gestaltungsfähigkeit erfordern
 
 ## Wie Themen Schwellen überschreiten
 
